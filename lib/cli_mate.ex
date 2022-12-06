@@ -151,7 +151,7 @@ defmodule CliMate do
 
       defp build_argument({key, conf}) when is_atom(key) and is_list(conf) do
         required = Keyword.get(conf, :required, true)
-        cast = Keyword.get(conf, :cast, &{:ok, &1})
+        cast = Keyword.get(conf, :cast, nil)
         doc = Keyword.get(conf, :doc, "")
         %Argument{key: key, required: required, cast: cast, doc: doc}
       end
@@ -259,7 +259,7 @@ defmodule CliMate do
       end
 
       defp take_args([%{key: key, cast: cast} | schemes], [value | argv], acc) do
-        case cast.(value) do
+        case apply_cast(cast, value) do
           {:ok, casted} ->
             acc = Map.put(acc, key, casted)
             take_args(schemes, argv, acc)
@@ -282,6 +282,18 @@ defmodule CliMate do
 
       defp take_args([%{required: false} | _], [], acc) do
         {:ok, acc}
+      end
+
+      defp apply_cast(nil, value) do
+        {:ok, value}
+      end
+
+      defp apply_cast(f, value) when is_function(f) do
+        f.(value)
+      end
+
+      defp apply_cast({m, f, a}, value) do
+        apply(m, f, [value | a])
       end
 
       def parse_or_halt!(argv, command) do

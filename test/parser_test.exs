@@ -87,4 +87,19 @@ defmodule CliMate.ParserTest do
     assert text =~ "Usage"
     assert_receive {CLI, :halt, 0}
   end
+
+  test "the arguments can be casted" do
+    opts = [arguments: [one: [cast: fn v -> {:ok, String.to_integer(v) + 1} end]]]
+    assert {:ok, %{arguments: %{one: 2}}} = CLI.parse(~w(1), opts)
+
+    opts = [arguments: [one: [cast: {__MODULE__, :cast_add_int, []}]]]
+    assert {:ok, %{arguments: %{one: 2}}} = CLI.parse(~w(1), opts)
+
+    opts = [arguments: [one: [cast: {__MODULE__, :cast_add_int, [10]}]]]
+    assert {:ok, %{arguments: %{one: 11}}} = CLI.parse(~w(1), opts)
+  end
+
+  def cast_add_int(v, add \\ 1) do
+    {:ok, String.to_integer(v) + add}
+  end
 end

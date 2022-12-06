@@ -5,6 +5,11 @@ defmodule CliMate.ParserTest do
     use CliMate
   end
 
+  setup do
+    CLI.put_shell(CLI.ProcessShell)
+    :ok
+  end
+
   test "options can be parsed" do
     opts = [options: [doit: [type: :boolean, short: :d]]]
     assert {:ok, %{options: %{doit: true}}} = CLI.parse(~w(--doit), opts)
@@ -60,9 +65,19 @@ defmodule CliMate.ParserTest do
   end
 
   test "the parse_or_halt! shortcut words" do
-    CLI.put_shell(CLI.ProcessShell)
     opts = [arguments: [lang: [required: true]]]
-    assert {:error, :halted} = CLI.parse_or_halt!([], opts)
+    assert :halt = CLI.parse_or_halt!([], opts)
     assert_receive {CLI, :halt, 1}
+  end
+
+  test "the --help option is always defined" do
+    assert {:ok, %{options: %{help: true}}} = CLI.parse(~w(--help), [])
+  end
+
+  test "the --help option will halt(0) with parse_or_halt!" do
+    assert :halt = CLI.parse_or_halt!(~w(--help), [])
+    {_, _, text} = assert_receive {CLI, :info, text}
+    assert text =~ "Usage"
+    assert_receive {CLI, :halt, 0}
   end
 end

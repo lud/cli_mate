@@ -170,7 +170,12 @@ defmodule CliMate do
       end
 
       defp build_command(conf) do
-        options = conf |> Keyword.get(:options, []) |> Enum.map(&build_option/1)
+        options =
+          conf
+          |> Keyword.get(:options, [])
+          |> Keyword.put_new(:help, type: :boolean, doc: "Displays this help.")
+          |> Enum.map(&build_option/1)
+
         arguments = conf |> Keyword.get(:arguments, []) |> Enum.map(&build_argument/1)
         name = conf |> Keyword.get(:name, nil)
         module = conf |> Keyword.get(:module, nil)
@@ -280,6 +285,11 @@ defmodule CliMate do
 
       def parse_or_halt!(argv, command) do
         case parse(argv, command) do
+          {:ok, %{options: %{help: true}}} ->
+            writeln(format_usage(command))
+            halt(0)
+            :halt
+
           {:ok, parsed} ->
             parsed
 
@@ -287,7 +297,7 @@ defmodule CliMate do
             writeln(format_usage(command))
             error(format_reason(reason))
             halt(1)
-            {:error, :halted}
+            :halt
         end
       end
 

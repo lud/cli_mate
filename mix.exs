@@ -1,28 +1,50 @@
 defmodule CliMate.MixProject do
   use Mix.Project
 
+  @source_url "https://github.com/lud/cli_mate"
+  @version "0.1.0"
+
   def project do
     [
       app: :cli_mate,
-      version: "0.1.0",
+      version: @version,
       elixir: "~> 1.13",
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      docs: docs(),
+      name: "CLI Mate",
+      package: package()
     ]
   end
 
-  # Run "mix help compile.app" to learn about applications.
   def application do
+    []
+  end
+
+  defp deps do
+    []
+  end
+
+  defp package do
     [
-      extra_applications: [:logger]
+      description:
+        "Helpers around OptionParser for options and arguments, embeddable in vendored mix tasks.",
+      licenses: ["MIT"],
+      maintainers: ["Ludovic Demblans <ludovic@demblans.com>"],
+      links: %{"GitHub" => @source_url}
     ]
   end
 
-  # Run "mix help deps" to learn about dependencies.
-  defp deps do
+  defp docs do
     [
-      # {:dep_from_hexpm, "~> 0.3.0"},
-      # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"}
+      extras: [
+        "LICENSE.md": [title: "License"],
+        "README.md": [title: "Overview"]
+      ],
+      main: "readme",
+      source_url: @source_url,
+      source_ref: "v#{@version}",
+      formatters: ["html"]
     ]
   end
 end

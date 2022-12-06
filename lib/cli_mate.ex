@@ -28,7 +28,7 @@ defmodule CliMate do
       end
 
       def color(color, iodata) do
-        [color, iodata]
+        [color, iodata, :default_color]
       end
 
       def error(iodata) do
@@ -344,7 +344,7 @@ defmodule CliMate do
             %{arguments: args} -> format_usage_args_list(args)
           end
 
-        ["Usage\n\n  ", name, optarray, argslist]
+        ["Usage\n\n    ", name, optarray, argslist]
       end
 
       defp format_usage_command_name(command) do
@@ -389,8 +389,7 @@ defmodule CliMate do
       defp format_usage_opts(options) do
         max_opt = max_key_len(options)
         columns = io_columns()
-        columns |> IO.inspect(label: "columns")
-        left_padding = 9 + max_opt
+        left_padding = 11 + max_opt
         wrapping = columns - left_padding
         pad_io = ["\n", String.duplicate(" ", left_padding)]
 
@@ -400,7 +399,7 @@ defmodule CliMate do
       end
 
       defp format_usage_opt({k, option}, max_opt, wrapping, pad_io) do
-        %Option{short: s, key: k, doc: doc, default: default} = option
+        %Option{type: t, short: s, key: k, doc: doc, default: default} = option
 
         short =
           case s do
@@ -412,14 +411,15 @@ defmodule CliMate do
         long = ["--", String.pad_trailing(name, max_opt, " ")]
 
         doc =
-          case default do
-            :skip -> doc
-            {:default, v} -> doc <> " Default: '#{ensure_string(v)}'."
+          case {t, default} do
+            {_, :skip} -> doc
+            {:boolean, _} -> doc
+            {_, {:default, v}} -> doc <> " Defaults to #{ensure_string(v)}."
           end
 
         wrapped_doc = doc |> wrap_doc(wrapping) |> Enum.intersperse(pad_io)
 
-        ["  ", short, " ", long, "  ", wrapped_doc, "\n"]
+        ["    ", short, " ", long, "  ", wrapped_doc, "\n"]
       end
 
       defp wrap_doc(doc, width) do

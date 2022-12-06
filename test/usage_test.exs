@@ -46,7 +46,7 @@ defmodule CliMate.UsageTest do
 
     assert usage =~ "-l --lang pick a language"
     assert usage =~ "--otp-vsn The OTP version."
-    assert usage =~ "--with-default Some stuff. Default: 'nothing'."
+    assert usage =~ "--with-default Some stuff. Defaults to nothing"
     assert usage =~ "mix some.command [options] <name> [<other> [<another>]]"
   end
 end

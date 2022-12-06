@@ -80,4 +80,11 @@ defmodule CliMate.ParserTest do
     assert text =~ "Usage"
     assert_receive {CLI, :halt, 0}
   end
+
+  test "the --help option ignore parsing of arguments" do
+    assert :halt = CLI.parse_or_halt!(~w(--help), arguments: [some_arg: []])
+    {_, _, text} = assert_receive {CLI, :info, text}
+    assert text =~ "Usage"
+    assert_receive {CLI, :halt, 0}
+  end
 end

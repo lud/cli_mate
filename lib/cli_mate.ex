@@ -199,10 +199,11 @@ defmodule CliMate do
 
         with {parsed_options, parsed_arguments, []} <-
                OptionParser.parse(argv, strict: strict, aliases: aliases),
-             {:ok, options_found} <- take_opts(options, parsed_options),
+             {:ok, %{help: false} = options_found} <- take_opts(options, parsed_options),
              {:ok, arguments_found} <- take_args(arguments, parsed_arguments) do
           {:ok, %{options: options_found, arguments: arguments_found}}
         else
+          {:ok, %{help: true} = options_found} -> {:ok, %{options: options_found, arguments: []}}
           {_, _, invalid} -> {:error, {:invalid, invalid}}
           {:error, _} = err -> err
         end
@@ -329,18 +330,31 @@ defmodule CliMate do
       #  Usage Format
       # -----------------------------------------------------------------------
 
-      def format_usage(command) when is_list(command) do
-        format_usage(build_command(command))
+      defp format_opts do
+        %{format: :cli}
       end
 
-      def format_usage(%Command{} = command) do
-        header = format_usage_header(command)
-        options = format_usage_opts(command.options)
+      def format_usage(command, opts \\ [])
+
+      def format_usage(command, opts) when is_list(command) do
+        format_usage(build_command(command), opts)
+      end
+
+      def format_usage(%Command{} = command, opts) do
+        opts = Map.merge(format_opts(), Map.new(opts))
+        header = format_usage_header(command, opts)
+        options = format_usage_opts(command.options, opts)
         [header, "\n\n", options]
       end
 
-      defp format_usage_header(command) do
+      defp format_usage_header(command, opts) do
         name = format_usage_command_name(command)
+
+        {title, padding} =
+          case opts.format do
+            :moduledoc -> {"## Usage", "    "}
+            _ -> {"Usage", "  "}
+          end
 
         optarray =
           case command do
@@ -354,7 +368,7 @@ defmodule CliMate do
             %{arguments: args} -> format_usage_args_list(args)
           end
 
-        ["Usage\n\n    ", name, optarray, argslist]
+        [title, "\n\n", padding, name, optarray, argslist]
       end
 
       defp format_usage_command_name(command) do
@@ -392,20 +406,59 @@ defmodule CliMate do
         []
       end
 
-      defp format_usage_opts([]) do
+      defp format_usage_opts([], _) do
         []
       end
 
-      defp format_usage_opts(options) do
+      defp format_usage_opts(options, opts) do
+        options = options |> Enum.sort_by(&sort_opts/1)
         max_opt = max_key_len(options)
         columns = io_columns()
-        left_padding = 11 + max_opt
+        left_padding = 9 + max_opt
         wrapping = columns - left_padding
         pad_io = ["\n", String.duplicate(" ", left_padding)]
 
-        opts = Enum.map(options, &format_usage_opt(&1, max_opt, wrapping, pad_io))
+        {title, optsdoc} =
+          case opts.format do
+            :moduledoc -> {"## Options", Enum.map(options, &format_usage_opt_md(&1))}
+            f -> {"Options", Enum.map(options, &format_usage_opt(&1, max_opt, wrapping, pad_io))}
+          end
 
-        ["Options\n\n" | opts]
+        opts = [title, "\n\n", optsdoc]
+      end
+
+      defp sort_opts({_, %Option{short: short, key: key}}) do
+        # Make options with a short before others, and then sort by name
+        s =
+          case short do
+            _ when key == :help -> 2
+            nil -> 1
+            _ -> 0
+          end
+
+        {s, key}
+      end
+
+      defp format_usage_opt_md({k, option}) do
+        %Option{type: t, short: s, key: k, doc: doc, default: default} = option
+
+        short =
+          case s do
+            nil -> []
+            _ -> ["`-", Atom.to_string(s), "`, "]
+          end
+
+        name = k |> Atom.to_string() |> String.replace("_", "-")
+        long = ["`--", name, "`"]
+
+        doc =
+          case doc do
+            "" -> ""
+            nil -> ""
+            text -> [" - ", clean_doc(text)]
+          end
+
+        ["* ", short, long, doc, "\n"]
       end
 
       defp format_usage_opt({k, option}, max_opt, wrapping, pad_io) do
@@ -414,7 +467,7 @@ defmodule CliMate do
         short =
           case s do
             nil -> "  "
-            _ -> "-#{s}"
+            _ -> [?-, Atom.to_string(s)]
           end
 
         name = k |> Atom.to_string() |> String.replace("_", "-")
@@ -429,11 +482,21 @@ defmodule CliMate do
 
         wrapped_doc = doc |> wrap_doc(wrapping) |> Enum.intersperse(pad_io)
 
-        ["    ", short, " ", long, "  ", wrapped_doc, "\n"]
+        ["  ", short, " ", long, "  ", wrapped_doc, "\n"]
+      end
+
+      defp clean_doc(doc) do
+        doc
+        |> String.replace("\n", " ")
+        |> String.replace(~r/\s+/, " ")
       end
 
       defp wrap_doc(doc, width) do
-        words = doc |> String.split(" ") |> Enum.map(&{&1, String.length(&1)})
+        words =
+          doc
+          |> clean_doc()
+          |> String.split(" ")
+          |> Enum.map(&{&1, String.length(&1)})
 
         Enum.reduce(words, {0, [], []}, fn {word, len}, {line_len, this_line, lines} ->
           cond do

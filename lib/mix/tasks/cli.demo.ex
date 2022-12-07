@@ -1,4 +1,5 @@
 defmodule Mix.Tasks.Cli.Demo do
+  @moduledoc false
   use Mix.Task
   alias CliMate.CLI
 
@@ -18,12 +19,6 @@ defmodule Mix.Tasks.Cli.Demo do
   ]
 
   @usage CLI.format_usage(@command, format: :moduledoc)
-
-  @moduledoc """
-  This is a demo mix task, it does nothing.
-
-  #{@usage}
-  """
 
   @impl Mix.Task
   def run(argv) do

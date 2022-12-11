@@ -18,7 +18,7 @@ defmodule Mix.Tasks.Cli.Demo do
     arguments: [arg_one: []]
   ]
 
-  @usage CLI.format_usage(@command, format: :moduledoc)
+  # @usage CLI.format_usage(@command, format: :moduledoc)
 
   @impl Mix.Task
   def run(argv) do

@@ -10,10 +10,21 @@ defmodule CliMate do
       # Here we just basically rewrite what mix does, because we do not want to
       # rely on Mix to be started if we build escripts.
 
+      @doc """
+      Defines the current shell to send console messages to. Accepts either
+      `#{inspect(__MODULE__)}` or `#{inspect(__MODULE__.ProcessShell)}`.
+
+      The shell is saved to `:persistent_term`, so shell should not be changed
+      repeatedly during runtime. This method of persistence is subject to change
+      and should not be relied on.
+      """
       def put_shell(module) do
         :persistent_term.put({__MODULE__, :shell}, module)
       end
 
+      @doc """
+      Returns the current shell used by #{inspect(__MODULE__)} to send output.
+      """
       def shell do
         :persistent_term.get({__MODULE__, :shell}, __MODULE__)
       end
@@ -27,42 +38,78 @@ defmodule CliMate do
         IO.puts(output, IO.ANSI.format(iodata))
       end
 
+      @doc """
+      Outputs `iodata` in the current shell, wrapped with formatting
+      information, such as `[color, iodata, :default_color]`.
+
+      `color` should be a `IO.ANSI.format/2` compatible atom.
+      """
       def color(color, iodata) do
         [color, iodata, :default_color]
       end
 
+      @doc """
+      Outputs `iodata` to `stderr` in the current shell, formatted with bright
+      red color.
+      """
       def error(iodata) do
         shell()._print(:stderr, :error, [:bright, color(:red, iodata)])
       end
 
+      @doc """
+      Outputs `iodata` to `stderr` in the current shell, formatted with yellow
+      color.
+      """
       def warn(iodata) do
         shell()._print(:stderr, :warn, color(:yellow, iodata))
       end
 
+      @doc """
+      Outputs `iodata` in the current shell, formatted with cyan color.
+      """
       def debug(iodata) do
         shell()._print(:stdio, :debug, color(:cyan, iodata))
       end
 
+      @doc """
+      Outputs `iodata` in the current shell, formatted with green color.
+      """
       def success(iodata) do
         shell()._print(:stdio, :info, color(:green, iodata))
       end
 
+      @doc """
+      Outputs `iodata` in the current shell.
+      """
       def writeln(iodata) do
         shell()._print(:stdio, :info, iodata)
       end
 
-      def halt(n \\ 0) when is_integer(n) do
-        shell()._halt(n)
+      @doc """
+      Stops the execution of the Erlang runtime, with a given return code.
+
+      If not provided, the return code will be `0`.
+      """
+      def halt(err_code \\ 0) when is_integer(err_code) do
+        shell()._halt(err_code)
       end
 
+      @doc """
+      Combines `success/1` then `halt/1`. Halts the Erlang runtime with a `0`
+      return code.
+      """
       def halt_success(iodata) do
         success(iodata)
         halt(0)
       end
 
-      def halt_error(n \\ 1, iodata) do
+      @doc """
+      Combines `error/1` then `halt/1`. Halts the Erlang runtime with a `1`
+      return code by default.
+      """
+      def halt_error(err_code \\ 1, iodata) do
         error(iodata)
-        halt(n)
+        halt(err_code)
       end
 
       @doc false
@@ -186,6 +233,114 @@ defmodule CliMate do
       # Parser
       # -----------------------------------------------------------------------
 
+      @doc """
+      Accepts the command line arguments and the definition of a command
+      (options, arguments, and metadata) and returns a parse result with values
+      extracted from the command line arguments.
+
+      ### Defining options
+
+      Options definitions is a `Keyword` whose keys are the option name, and
+      values are the options parameters. Note that keys with underscores like
+      `some_thing` define options in kebab case like `--some-thing`.
+
+      The following parameters are available:
+
+      - `:type` - Can be either `:boolean`, `:integer` or `:string`. The default
+        value is `:string`.
+      - `:short` - Defines the shortcut for the option, for instance `-p`
+        instead of `--port`.
+      - `:default` - Defines the default value if the corresponding option is
+        not defined in `argv`. Keys for without default values that are not
+        provided in `argv` will not be defined in the results.
+      - `:doc` - Accepts a string that will be used when formatting the usage
+        block for the command.
+
+      Note that the `:help` option is always defined and cannot be overridden.
+
+      ### Options examples
+
+          iex> {:ok, result} = parse(~w(--who joe), [options: [who: [type: :string]]])
+          iex> result.options.who
+          "joe"
+
+          iex> {:ok, result} = parse(~w(--who joe), [options: [who: []]])
+          iex> result.options.who
+          "joe"
+
+          iex> {:ok, result} = parse(~w(--port 4000), [options: [port: [type: :integer]]])
+          iex> result.options.port
+          4000
+
+          iex> {:ok, result} = parse(~w(-p 4000), [options: [port: [type: :integer, short: :p]]])
+          iex> result.options.port
+          4000
+
+          iex> parse(~w(--port nope), [options: [port: [type: :integer]]])
+          {:error, {:invalid, [{"--port", "nope"}]}}
+
+          iex> {:ok, result} = parse([], [options: [lang: [default: "elixir"]]])
+          iex> result.options.lang
+          "elixir"
+
+          iex> {:ok, result} = parse([], [options: [lang: []]])
+          iex> Map.has_key?(result.options, :lang)
+          false
+
+          iex> {:ok, result} = parse([], options: [])
+          iex> result.options.help
+          false
+
+          iex> {:ok, result} = parse(~w(--help), options: [])
+          iex> result.options.help
+          true
+
+      ### Defining arguments
+
+      Arguments can be defined in the same way, providing a `Keyword` where the
+      keys are the argument names and the values are the parameters.
+
+      ### Defining arguments
+
+      The following parameters are available:
+
+      - `:required` - A boolean marking the argument as required. **Note that
+        arguments are required by default**. Keys for optional arguments that
+        are not provided by the command line will not be defined in the results.
+      - `:cast` - Accepts a fun or a `{module, function, arguments}` tuple to
+        transform the argument value when parsing. The invoked function must
+        return a result tuple: `{:ok, _} | {:error, _}`.
+      - `:doc` - Accepts a string that will be used when formatting the usage
+        block for the command. Note that this is not currently implemented for
+        arguments.
+
+      ### Arguments examples
+
+          iex> {:ok, result} = parse(~w(joe), arguments: [who: []])
+          iex> result.arguments.who
+          "joe"
+
+          iex> parse([], arguments: [who: []])
+          {:error, {:missing_argument, :who}}
+
+          iex> {:ok, result} = parse([], arguments: [who: [required: false]])
+          iex> result.arguments
+          %{}
+
+          iex> cast = fn string -> Date.from_iso8601(string) end
+          iex> {:ok, result} = parse(["2022-12-22"], arguments: [date: [cast: cast]])
+          iex> result.arguments.date
+          ~D[2022-12-22]
+
+          iex> cast = {Date, :from_iso8601, []}
+          iex> {:ok, result} = parse(["2022-12-22"], arguments: [date: [cast: cast]])
+          iex> result.arguments.date
+          ~D[2022-12-22]
+
+          iex> cast = {Date, :from_iso8601, []}
+          iex> parse(["not-a-date"], arguments: [date: [cast: cast]])
+          {:error, {:argument_cast, :date, :invalid_format}}
+      """
       def parse(argv, command) when is_list(command) do
         parse(argv, build_command(command))
       end
@@ -206,6 +361,38 @@ defmodule CliMate do
           {:ok, %{help: true} = options_found} -> {:ok, %{options: options_found, arguments: []}}
           {_, _, invalid} -> {:error, {:invalid, invalid}}
           {:error, _} = err -> err
+        end
+      end
+
+      @doc """
+      Attempts to parse the command line arguments `argv` with the defined
+      command.
+
+      Command options and arguments are documented in the `parse/2` function of
+      this module.
+
+      In `parse_or_halt!/2`, the successful return value will not be wrapped in
+      an `:ok` tuple, but directly a map with the `:options` and `:arguments`
+      keys.
+
+      In case of a parse error, this function will output the usage block
+      followed by a formatted error message, and halt the Erlang runtime.
+      """
+      def parse_or_halt!(argv, command) do
+        case parse(argv, command) do
+          {:ok, %{options: %{help: true}}} ->
+            writeln(format_usage(command))
+            halt(0)
+            :halt
+
+          {:ok, parsed} ->
+            parsed
+
+          {:error, reason} ->
+            writeln(format_usage(command))
+            error(format_reason(reason))
+            halt(1)
+            :halt
         end
       end
 
@@ -233,7 +420,7 @@ defmodule CliMate do
         end
       end
 
-      def get_opt_value(opts, key, default) do
+      defp get_opt_value(opts, key, default) do
         case Keyword.fetch(opts, key) do
           :error ->
             case default do
@@ -296,24 +483,6 @@ defmodule CliMate do
         apply(m, f, [value | a])
       end
 
-      def parse_or_halt!(argv, command) do
-        case parse(argv, command) do
-          {:ok, %{options: %{help: true}}} ->
-            writeln(format_usage(command))
-            halt(0)
-            :halt
-
-          {:ok, parsed} ->
-            parsed
-
-          {:error, reason} ->
-            writeln(format_usage(command))
-            error(format_reason(reason))
-            halt(1)
-            :halt
-        end
-      end
-
       defp format_reason({:argument_cast, key, reason}) do
         ["error when casting argument ", Atom.to_string(key), ": ", ensure_string(reason)]
       end
@@ -346,6 +515,16 @@ defmodule CliMate do
         %{format: :cli}
       end
 
+      @doc """
+      Returns a standard "usage" documentation block describing the different
+      options of the given command.
+
+      ### Options
+
+      * `:format` - If `:moduledoc`, the formatted usage will be compatible for
+        embedding in a `@moduledoc` attribute. Any other value will generate a
+        simple terminal styled text. Defaults to `:cli`.
+      """
       def format_usage(command, opts \\ [])
 
       def format_usage(command, opts) when is_list(command) do

@@ -102,4 +102,36 @@ defmodule CliMate.ParserTest do
   def cast_add_int(v, add \\ 1) do
     {:ok, String.to_integer(v) + add}
   end
+
+  test "default values can be provided by anonymous functions" do
+    opts = [options: [msg: [short: :m, default: fn -> "hello" end]]]
+    assert {:ok, %{options: %{msg: "hello"}}} = CLI.parse([], opts)
+  end
+
+  defp my_default_port, do: 4000
+
+  test "default values can be provided by function refs" do
+    opts = [options: [port: [short: :p, default: &my_default_port/0]]]
+    assert {:ok, %{options: %{port: 4000}}} = CLI.parse([], opts)
+  end
+
+  test "default values can be provided by fn/1" do
+    provider = fn
+      :port -> 4000
+      :scheme -> "http"
+    end
+
+    opts = [options: [port: [default: provider], scheme: [default: provider]]]
+
+    assert {:ok, %{options: %{port: 4000, scheme: "http"}}} = CLI.parse([], opts)
+  end
+
+  defp my_default_opt(:port), do: 3000
+  defp my_default_opt(:scheme), do: "https"
+
+  test "default values can be provided by &f/1" do
+    opts = [options: [port: [default: &my_default_opt/1], scheme: [default: &my_default_opt/1]]]
+
+    assert {:ok, %{options: %{port: 3000, scheme: "https"}}} = CLI.parse([], opts)
+  end
 end

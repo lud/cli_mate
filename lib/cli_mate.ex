@@ -251,12 +251,31 @@ defmodule CliMate do
       - `:short` - Defines the shortcut for the option, for instance `-p`
         instead of `--port`.
       - `:default` - Defines the default value if the corresponding option is
-        not defined in `argv`. Keys for without default values that are not
-        provided in `argv` will not be defined in the results.
+        not defined in `argv`.See "Default values" below.
       - `:doc` - Accepts a string that will be used when formatting the usage
         block for the command.
 
       Note that the `:help` option is always defined and cannot be overridden.
+
+      ### Default values
+
+      Default values can be omitted, in that case, the option will not be
+      present at all if not provided in the command line.
+
+      When defined, a default value can be:
+
+      * A raw value, that is anything that is not a function. This value will be
+        used as the default value.
+      * A function of arity zero. This function will be called when the option
+        is not provided in the command line and the result value will be used as
+        the default value. For instance `fn -> 123 end` or `&default_age/0`.
+      * A function of arity one. This function will be called with the option
+        key as its argument. For instance, passing `&default_opt/1` as the
+        `:default` for an option definition allow to define the following
+        function:
+
+            defp default_opt(:port), do: 4000
+            defp default_opt(:scheme), do: "http"
 
       ### Options examples
 
@@ -424,7 +443,7 @@ defmodule CliMate do
         case Keyword.fetch(opts, key) do
           :error ->
             case default do
-              {:default, v} -> {:ok, v}
+              {:default, v} -> {:ok, get_opt_default(v, key)}
               :skip -> :skip
             end
 
@@ -432,6 +451,10 @@ defmodule CliMate do
             {:ok, v}
         end
       end
+
+      defp get_opt_default(f, _) when is_function(f, 0), do: f.()
+      defp get_opt_default(f, key) when is_function(f, 1), do: f.(key)
+      defp get_opt_default(raw, _), do: raw
 
       defp collect_list_option(opts, key) do
         opts |> Enum.filter(fn {k, _} -> k == key end) |> Enum.map(&elem(&1, 1))
@@ -503,8 +526,8 @@ defmodule CliMate do
         ["missing argument ", Atom.to_string(key)]
       end
 
-      defp format_reason(:other) do
-        :lol
+      defp format_reason(other) do
+        inspect(other)
       end
 
       # -----------------------------------------------------------------------

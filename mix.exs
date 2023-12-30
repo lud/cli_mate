@@ -32,7 +32,7 @@ defmodule CliMate.MixProject do
         "Helpers around OptionParser for options and arguments, embeddable in vendored mix tasks.",
       licenses: ["MIT"],
       maintainers: ["Ludovic Demblans <ludovic@demblans.com>"],
-      links: %{"GitHub" => @source_url}
+      links: %{"GitHub" => @source_url, "Changelog" => "#{@source_url}/blob/main/CHANGELOG.md"}
     ]
   end
 

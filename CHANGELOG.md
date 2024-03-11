@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.1] - 2024-03-11
+
+### Miscellaneous Tasks
+
+- Update README.md version on release
+
 ## [0.3.0] - 2024-03-11
 
 ### Features

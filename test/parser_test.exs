@@ -1,9 +1,6 @@
 defmodule CliMate.ParserTest do
   use ExUnit.Case, async: true
-
-  defmodule CLI do
-    use CliMate
-  end
+  alias CliMate.CLI
 
   setup do
     CLI.put_shell(CLI.ProcessShell)
@@ -17,11 +14,6 @@ defmodule CliMate.ParserTest do
     assert {:ok, %{options: %{doit: false}}} = CLI.parse(~w(--no-doit), opts)
   end
 
-  test "boolean option always default to false" do
-    opts = [options: [doit: [type: :boolean]]]
-    assert {:ok, %{options: %{doit: false}}} = CLI.parse([], opts)
-  end
-
   test "options can have default values" do
     opts = [options: [msg: [short: :m, default: "byebye"]]]
     assert {:ok, %{options: %{msg: "hello"}}} = CLI.parse(~w(--msg hello), opts)
@@ -31,6 +23,25 @@ defmodule CliMate.ParserTest do
 
   test "unknown options generate errors" do
     assert {:error, {:invalid, [{"--msg", _}]}} = CLI.parse(~w(--msg hello), [])
+  end
+
+  test "boolean option can be missing" do
+    opts = [options: [doit: [type: :boolean]]]
+    assert {:ok, %{options: %{help: false}, arguments: %{}}} == CLI.parse([], opts)
+  end
+
+  test "boolean option can default to false" do
+    opts = [options: [doit: [type: :boolean, default: false]]]
+    assert {:ok, %{options: %{doit: false}}} = CLI.parse([], opts)
+    assert {:ok, %{options: %{doit: false}}} = CLI.parse(["--no-doit"], opts)
+    assert {:ok, %{options: %{doit: true}}} = CLI.parse(["--doit"], opts)
+  end
+
+  test "boolean option can default to true" do
+    opts = [options: [doit: [type: :boolean, default: true]]]
+    assert {:ok, %{options: %{doit: true}}} = CLI.parse([], opts)
+    assert {:ok, %{options: %{doit: false}}} = CLI.parse(["--no-doit"], opts)
+    assert {:ok, %{options: %{doit: true}}} = CLI.parse(["--doit"], opts)
   end
 
   test "integer option should be enforced" do

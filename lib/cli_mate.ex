@@ -175,7 +175,7 @@ defmodule CliMate do
         default =
           case Keyword.fetch(conf, :default) do
             {:ok, term} -> {:default, term}
-            :error when type == :boolean -> {:default, false}
+            :error when type == :boolean -> :skip
             :error -> :skip
           end
 
@@ -220,7 +220,7 @@ defmodule CliMate do
         options =
           conf
           |> Keyword.get(:options, [])
-          |> Keyword.put_new(:help, type: :boolean, doc: "Displays this help.")
+          |> Keyword.put_new(:help, type: :boolean, default: false, doc: "Displays this help.")
           |> Enum.map(&build_option/1)
 
         arguments = conf |> Keyword.get(:arguments, []) |> Enum.map(&build_argument/1)

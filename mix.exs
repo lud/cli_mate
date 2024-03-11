@@ -65,8 +65,8 @@ defmodule CliMate.MixProject do
     version = Version.parse!(vsn)
     readme_vsn = "#{version.major}.#{version.minor}"
     readme = File.read!("README.md")
-    re = ~r/:aoc, "~> \d+\.\d+"/
-    readme = String.replace(readme, re, ":aoc, \"~> #{readme_vsn}\"")
+    re = ~r/:cli_mate, "~> \d+\.\d+"/
+    readme = String.replace(readme, re, ":cli_mate, \"~> #{readme_vsn}\"")
     File.write!("README.md", readme)
     :ok
   end

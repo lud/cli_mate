@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] - 2024-03-11
+
+### Features
+
+- [**breaking**] Boolean options do not default to false anymore
+
+### Testing
+
+- Added tests for the --help option
+
 ## [0.2.1] - 2023-12-30
 
 ### Miscellaneous Tasks

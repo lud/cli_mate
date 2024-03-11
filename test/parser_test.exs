@@ -82,6 +82,7 @@ defmodule CliMate.ParserTest do
   end
 
   test "the --help option is always defined" do
+    assert {:ok, %{options: %{help: false}}} = CLI.parse(~w(), [])
     assert {:ok, %{options: %{help: true}}} = CLI.parse(~w(--help), [])
   end
 
@@ -97,6 +98,10 @@ defmodule CliMate.ParserTest do
     {_, _, text} = assert_receive {CLI, :info, _text}
     assert text =~ "Usage"
     assert_receive {CLI, :halt, 0}
+  end
+
+  test "the --help option cannot be overriden" do
+    assert {:error, {:invalid, _}} = CLI.parse(~w(--help), options: [help: [type: :integer]])
   end
 
   test "the arguments can be casted" do

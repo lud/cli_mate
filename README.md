@@ -19,7 +19,7 @@ For this reason, CliMate only defines a small set of  features.
 ```elixir
 def deps do
   [
-    {:cli_mate, "~> 0.1.0", runtime: false},
+    {:cli_mate, "~> 0.1", runtime: false},
   ]
 end
 ```

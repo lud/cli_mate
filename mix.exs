@@ -61,7 +61,7 @@ defmodule CliMate.MixProject do
     ]
   end
 
-  defp update_readme(vsn) do
+  def update_readme(vsn) do
     version = Version.parse!(vsn)
     readme_vsn = "#{version.major}.#{version.minor}"
     readme = File.read!("README.md")

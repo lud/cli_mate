@@ -118,7 +118,17 @@ defmodule CliMate do
       end
 
       defmodule ProcessShell do
-        @moduledoc false
+        @moduledoc """
+        An output shell implementation allowing your CLI commands to send their
+        output as messages to themselves. This is most useful for tests.
+
+        The process that will receive the messages is found by looking up the
+        first pid in the `:"$callers"` key of the process dictionary, or
+        `self()` if there is no caller.
+
+        Use `#{inspect cli_mod}.put_shell(#{inspect __MODULE__})` to enable this
+        shell.
+        """
 
         @doc false
         def cli_mod, do: unquote(cli_mod)
@@ -134,7 +144,10 @@ defmodule CliMate do
           |> :erlang.iolist_to_binary()
         end
 
-        defp message_target() do
+        @doc """
+        Returns the pid of the process that will receive output messages.
+        """
+        def message_target do
           case Process.get(:"$callers") do
             [parent | _] -> parent
             _ -> self()

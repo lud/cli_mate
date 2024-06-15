@@ -732,7 +732,14 @@ defmodule CliMate do
           case doc do
             "" -> ""
             nil -> ""
-            text -> [" - ", clean_doc(text)]
+            text -> [" - ", unwrap_doc(text)]
+          end
+
+        doc =
+          case {k, default} do
+            {:help, _} -> doc
+            {_, :skip} -> doc
+            {_, {:default, v}} -> [doc, " Defaults to #{ensure_string(v)}."]
           end
 
         ["* ", short, long, doc, "\n"]
@@ -751,9 +758,10 @@ defmodule CliMate do
         long = ["--", String.pad_trailing(name, max_opt, " ")]
 
         doc =
-          case {t, default} do
+          case {k, default} do
+            {:help, _} -> doc
             {_, :skip} -> doc
-            {_, {:default, v}} -> doc <> " Defaults to #{ensure_string(v)}."
+            {_, {:default, v}} -> [doc, " Defaults to #{ensure_string(v)}."]
           end
 
         wrapped_doc = doc |> wrap_doc(wrapping) |> Enum.intersperse(pad_io)
@@ -761,8 +769,9 @@ defmodule CliMate do
         ["  ", short, " ", long, "  ", wrapped_doc, "\n"]
       end
 
-      defp clean_doc(doc) do
+      defp unwrap_doc(doc) do
         doc
+        |> IO.chardata_to_string()
         |> String.replace("\n", " ")
         |> String.replace(~r/\s+/, " ")
       end
@@ -770,7 +779,7 @@ defmodule CliMate do
       defp wrap_doc(doc, width) do
         words =
           doc
-          |> clean_doc()
+          |> unwrap_doc()
           |> String.split(" ")
           |> Enum.map(&{&1, String.length(&1)})
 

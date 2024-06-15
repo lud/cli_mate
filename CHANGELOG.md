@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0] - 2024-06-15
+
+### Features
+
+- Format boolean defaults in --help
+- Preserve options order in help doc
+- Allow arguments to specify type of string, integer or float
+
 ## [0.3.2] - 2024-06-14
 
 ### Documentation

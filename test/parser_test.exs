@@ -63,6 +63,14 @@ defmodule CliMate.ParserTest do
 
     opts = [arguments: [lang: [required: true]]]
     assert {:error, {:missing_argument, :lang}} = CLI.parse([], opts)
+
+    opts = [arguments: [lang: [required: false], platform: [required: true]]]
+
+    assert {:ok, %{arguments: %{lang: "erlang", platform: "otp"}}} =
+             CLI.parse(~w(erlang otp), opts)
+
+    opts = [arguments: [lang: [required: false], platform: [required: true]]]
+    assert {:error, {:missing_argument, :platform}} = CLI.parse(~w(erlang), opts)
   end
 
   test "arguments are required by default" do
@@ -119,6 +127,27 @@ defmodule CliMate.ParserTest do
 
   def cast_add_int(v, add \\ 1) do
     {:ok, String.to_integer(v) + add}
+  end
+
+  test "arguments cast can return error" do
+    opts = [arguments: [one: [cast: fn _ -> {:error, "bad stuff"} end]]]
+    assert {:error, {:argument_cast, :one, "bad stuff"}} = CLI.parse(~w(1), opts)
+  end
+
+  test "arguments can have type" do
+    opts = [arguments: [one: [type: :integer]]]
+    assert {:ok, %{arguments: %{one: 1}}} = CLI.parse(~w(1), opts)
+
+    assert {:error, {:argument_type, :one, "Invalid argument one, expected type integer"}} =
+             CLI.parse(~w(hello), opts)
+  end
+
+  test "arguments types are from a shortlist" do
+    opts = [arguments: [one: [type: :"unknown-type"]]]
+
+    assert_raise ArgumentError, ~r"expected argument type", fn ->
+      CLI.parse(~w(1), opts)
+    end
   end
 
   test "default values can be provided by anonymous functions" do

@@ -198,12 +198,14 @@ defmodule CliMate do
 
       defmodule Argument do
         @moduledoc false
-        @enforce_keys [:key, :required, :cast, :doc]
+        @enforce_keys [:key, :required, :cast, :doc, :type]
         defstruct @enforce_keys
 
+        @type vtype :: :integer | :float | :string
         @type t :: %__MODULE__{
                 required: boolean,
                 key: atom,
+                type: vtype,
                 doc: binary,
                 cast: (term -> term) | {module, atom, [term]}
               }
@@ -212,8 +214,41 @@ defmodule CliMate do
       defp build_argument({key, conf}) when is_atom(key) and is_list(conf) do
         required = Keyword.get(conf, :required, true)
         cast = Keyword.get(conf, :cast, nil)
+
         doc = Keyword.get(conf, :doc, "")
-        %Argument{key: key, required: required, cast: cast, doc: doc}
+        type = Keyword.get(conf, :type, :string)
+
+        validate_arg_type_spec(type)
+
+        %Argument{key: key, required: required, cast: cast, doc: doc, type: type}
+      end
+
+      defp validate_cast(cast) do
+        case cast do
+          f when is_function(f, 1) ->
+            :ok
+
+          nil ->
+            :ok
+
+          {m, f, a} when is_atom(m) and is_atom(f) and is_list(a) ->
+            :ok
+
+          _ ->
+            raise(
+              ArgumentError,
+              "Expected :cast function to be a valid cast function, got: #{inspect(cast)}"
+            )
+        end
+      end
+
+      defp validate_arg_type_spec(spec) do
+        unless spec in [:string, :float, :integer] do
+          raise ArgumentError,
+                "expected argument type to be one of :string, :float or :integer, got: #{inspect(spec)}"
+        end
+
+        :ok
       end
 
       defmodule Command do
@@ -485,17 +520,25 @@ defmodule CliMate do
         {:error, {:missing_argument, key}}
       end
 
-      defp take_args([%{key: key, cast: cast} | schemes], [value | argv], acc) do
-        case apply_cast(cast, value) do
-          {:ok, casted} ->
-            acc = Map.put(acc, key, casted)
-            take_args(schemes, argv, acc)
+      defp take_args([scheme | schemes], [value | argv], acc) do
+        %{key: key, cast: cast, type: t} = scheme
 
-          {:error, reason} ->
-            {:error, {:argument_cast, key, reason}}
+        case cast_arg_type(t, value) do
+          :error ->
+            {:error, {:argument_type, key, "Invalid argument #{key}, expected type #{t}"}}
 
-          other ->
-            {:error, {:argument_cast, key, {:bad_return, other}}}
+          {:ok, value} ->
+            case apply_cast(cast, value) do
+              {:ok, casted} ->
+                acc = Map.put(acc, key, casted)
+                take_args(schemes, argv, acc)
+
+              {:error, reason} ->
+                {:error, {:argument_cast, key, reason}}
+
+              other ->
+                {:error, {:argument_cast, key, {:bad_return, other}}}
+            end
         end
       end
 
@@ -509,6 +552,22 @@ defmodule CliMate do
 
       defp take_args([%{required: false} | _], [], acc) do
         {:ok, acc}
+      end
+
+      defp cast_arg_type(:string, value), do: {:ok, value}
+
+      defp cast_arg_type(:integer, value) do
+        case Integer.parse(value) do
+          {v, ""} -> {:ok, v}
+          :error -> :error
+        end
+      end
+
+      defp cast_arg_type(:float, value) do
+        case Float.parse(value) do
+          {v, ""} -> {:ok, v}
+          :error -> :error
+        end
       end
 
       defp apply_cast(nil, value) do

@@ -229,11 +229,15 @@ defmodule CliMate do
               }
       end
 
+      @help_option_def [type: :boolean, default: false, doc: "Displays this help."]
+
       defp build_command(conf) do
         options =
           conf
           |> Keyword.get(:options, [])
-          |> Keyword.put_new(:help, type: :boolean, default: false, doc: "Displays this help.")
+          |> Keyword.update(:help, @help_option_def, fn _ ->
+            raise ArgumentError, "the :help option cannot be overriden"
+          end)
           |> Enum.map(&build_option/1)
 
         arguments = conf |> Keyword.get(:arguments, []) |> Enum.map(&build_argument/1)
@@ -473,7 +477,7 @@ defmodule CliMate do
         opts |> Enum.filter(fn {k, _} -> k == key end) |> Enum.map(&elem(&1, 1))
       end
 
-      defp take_args(schemes = task, args) do
+      defp take_args(schemes, args) do
         take_args(schemes, args, %{})
       end
 
@@ -638,7 +642,6 @@ defmodule CliMate do
       end
 
       defp format_usage_opts(options, opts) do
-        options = options |> Enum.sort_by(&sort_opts/1)
         max_opt = max_key_len(options)
         columns = io_columns()
         left_padding = 9 + max_opt
@@ -652,18 +655,6 @@ defmodule CliMate do
           end
 
         opts = [title, "\n\n", optsdoc]
-      end
-
-      defp sort_opts({_, %Option{short: short, key: key}}) do
-        # Make options with a short before others, and then sort by name
-        s =
-          case short do
-            _ when key == :help -> 2
-            nil -> 1
-            _ -> 0
-          end
-
-        {s, key}
       end
 
       defp format_usage_opt_md({k, option}) do

@@ -101,7 +101,9 @@ defmodule CliMate.ParserTest do
   end
 
   test "the --help option cannot be overriden" do
-    assert {:error, {:invalid, _}} = CLI.parse(~w(--help), options: [help: [type: :integer]])
+    assert_raise ArgumentError, "the :help option cannot be overriden", fn ->
+      CLI.parse(~w(--help 123), options: [help: [type: :integer]])
+    end
   end
 
   test "the arguments can be casted" do

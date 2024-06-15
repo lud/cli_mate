@@ -126,7 +126,7 @@ defmodule CliMate do
         first pid in the `:"$callers"` key of the process dictionary, or
         `self()` if there is no caller.
 
-        Use `#{inspect cli_mod}.put_shell(#{inspect __MODULE__})` to enable this
+        Use `#{inspect(cli_mod)}.put_shell(#{inspect(__MODULE__)})` to enable this
         shell.
         """
 
@@ -703,7 +703,6 @@ defmodule CliMate do
         doc =
           case {t, default} do
             {_, :skip} -> doc
-            {:boolean, _} -> doc
             {_, {:default, v}} -> doc <> " Defaults to #{ensure_string(v)}."
           end
 

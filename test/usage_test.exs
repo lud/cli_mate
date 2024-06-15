@@ -33,6 +33,13 @@ defmodule CliMate.UsageTest do
         with_default: [
           doc: "Some stuff.",
           default: "nothing"
+        ],
+        bool_with_default: [
+          type: :boolean,
+          default: true
+        ],
+        bool_bare: [
+          type: :boolean
         ]
       ],
       arguments: [
@@ -48,5 +55,6 @@ defmodule CliMate.UsageTest do
     assert usage =~ "--otp-vsn The OTP version."
     assert usage =~ "--with-default Some stuff. Defaults to nothing"
     assert usage =~ "mix some.command [options] <name> [<other> [<another>]]"
+    assert usage =~ ~r"bool-with-default.*Defaults to true."
   end
 end

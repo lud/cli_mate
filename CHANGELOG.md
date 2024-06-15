@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.1] - 2024-06-15
+
+### Miscellaneous Tasks
+
+- Do not show default value for --help
+
 ## [0.4.0] - 2024-06-15
 
 ### Features

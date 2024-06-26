@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0] - 2024-06-26
+
+### Features
+
+- Added doc_arg spec option to command options
+
 ## [0.4.1] - 2024-06-15
 
 ### Miscellaneous Tasks

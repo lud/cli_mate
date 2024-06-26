@@ -11,8 +11,10 @@ defmodule CliMate.UsageTest do
     |> IO.puts()
 
     iodata
-    |> IO.ANSI.format(false)
+    |> IO.ANSI.format(_emit = false)
     |> :erlang.iolist_to_binary()
+
+    # Remove duplicated spaces to ease assrting/matching on strings
     |> String.replace(~r/ +/, " ")
   end
 
@@ -26,6 +28,8 @@ defmodule CliMate.UsageTest do
           doc: "pick a language"
         ],
         otp_vsn: [type: :integer, doc: "The OTP version."],
+        with_name: [doc_arg: "some-name"],
+        with_name_bool: [doc_arg: "some-name", type: :boolean, doc: "The doc_arg is not used"],
         diatribe: [
           doc:
             "This is a very long documentation line and it should be wrapped on multiple lines if the terminal is short."
@@ -49,11 +53,13 @@ defmodule CliMate.UsageTest do
       ]
     ]
 
-    usage = CLI.format_usage(command) |> stringify()
+    usage = CLI.format_usage(command) |> stringify() |> tap(&IO.puts/1)
 
-    assert usage =~ "-l --lang pick a language"
-    assert usage =~ "--otp-vsn The OTP version."
-    assert usage =~ "--with-default Some stuff. Defaults to nothing"
+    assert usage =~ "-l --lang <value> pick a language"
+    assert usage =~ "--otp-vsn <value> The OTP version."
+    assert usage =~ "--with-name <some-name>"
+    assert usage =~ "--with-name-bool The doc_arg is not used"
+    assert usage =~ "--with-default <value> Some stuff. Defaults to nothing"
     assert usage =~ "mix some.command [options] <name> [<other> [<another>]]"
     assert usage =~ ~r"bool-with-default.*Defaults to true."
   end

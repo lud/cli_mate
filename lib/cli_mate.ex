@@ -165,7 +165,7 @@ defmodule CliMate do
 
       defmodule Option do
         @moduledoc false
-        @enforce_keys [:key, :doc, :type, :short, :default, :keep]
+        @enforce_keys [:key, :doc, :type, :short, :default, :keep, :doc_arg]
         defstruct @enforce_keys
 
         @type vtype :: :integer | :float | :string | :count | :boolean
@@ -175,7 +175,8 @@ defmodule CliMate do
                 type: vtype,
                 short: atom,
                 default: term,
-                keep: boolean
+                keep: boolean,
+                doc_arg: binary
               }
       end
 
@@ -184,6 +185,7 @@ defmodule CliMate do
         type = Keyword.get(conf, :type, :string)
         doc = Keyword.get(conf, :doc, "")
         short = Keyword.get(conf, :short, nil)
+        doc_arg = Keyword.get(conf, :doc_arg, "value")
 
         default =
           case Keyword.fetch(conf, :default) do
@@ -192,7 +194,16 @@ defmodule CliMate do
             :error -> :skip
           end
 
-        opt = %Option{key: key, doc: doc, type: type, short: short, default: default, keep: keep}
+        opt = %Option{
+          key: key,
+          doc: doc,
+          type: type,
+          short: short,
+          default: default,
+          keep: keep,
+          doc_arg: doc_arg
+        }
+
         {key, opt}
       end
 
@@ -701,9 +712,9 @@ defmodule CliMate do
       end
 
       defp format_usage_opts(options, opts) do
-        max_opt = max_key_len(options)
+        max_opt = max_keyval_len(options)
         columns = io_columns()
-        left_padding = 9 + max_opt
+        left_padding = 12 + max_opt
         wrapping = columns - left_padding
         pad_io = ["\n", String.duplicate(" ", left_padding)]
 
@@ -717,7 +728,7 @@ defmodule CliMate do
       end
 
       defp format_usage_opt_md({k, option}) do
-        %Option{type: t, short: s, key: k, doc: doc, default: default} = option
+        %Option{type: t, short: s, key: k, doc: doc, default: default, doc_arg: doc_arg} = option
 
         short =
           case s do
@@ -726,7 +737,14 @@ defmodule CliMate do
           end
 
         name = k |> Atom.to_string() |> String.replace("_", "-")
-        long = ["`--", name, "`"]
+
+        doc_arg =
+          case t do
+            :boolean -> []
+            _ -> [" <", doc_arg, ">"]
+          end
+
+        long = ["`--", name, doc_arg, "`"]
 
         doc =
           case doc do
@@ -746,7 +764,7 @@ defmodule CliMate do
       end
 
       defp format_usage_opt({k, option}, max_opt, wrapping, pad_io) do
-        %Option{type: t, short: s, key: k, doc: doc, default: default} = option
+        %Option{type: t, short: s, key: k, doc: doc, default: default, doc_arg: doc_arg} = option
 
         short =
           case s do
@@ -755,7 +773,14 @@ defmodule CliMate do
           end
 
         name = k |> Atom.to_string() |> String.replace("_", "-")
-        long = ["--", String.pad_trailing(name, max_opt, " ")]
+
+        long =
+          case t do
+            :boolean -> name
+            _ -> to_string([name, " <", doc_arg, ">"])
+          end
+
+        long = ["--", String.pad_trailing(long, max_opt + 3, " ")]
 
         doc =
           case {k, default} do
@@ -796,10 +821,15 @@ defmodule CliMate do
         end
       end
 
-      defp max_key_len(kw) do
+      defp max_keyval_len(kw) do
         kw
-        |> Keyword.keys()
-        |> Enum.map(&String.length(Atom.to_string(&1)))
+        |> Enum.map(fn
+          {k, %Option{type: :boolean}} ->
+            String.length(Atom.to_string(k))
+
+          {k, %Option{doc_arg: doc_arg}} ->
+            String.length(Atom.to_string(k)) + String.length(doc_arg)
+        end)
         |> Enum.max(fn -> 0 end)
       end
 

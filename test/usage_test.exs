@@ -18,8 +18,8 @@ defmodule CliMate.UsageTest do
     |> String.replace(~r/ +/, " ")
   end
 
-  test "usage block can be formatted" do
-    command = [
+  defp command_test_format do
+    [
       module: Mix.Tasks.Some.Command,
       options: [
         lang: [
@@ -44,6 +44,15 @@ defmodule CliMate.UsageTest do
         ],
         bool_bare: [
           type: :boolean
+        ],
+        with_default_fun: [
+          doc: "Some fun",
+          # Output not tested but should not fail
+          default: fn k -> some_default(k) end
+        ],
+        with_default_capture: [
+          doc: "Some fun",
+          default: &__MODULE__.some_default/1
         ]
       ],
       arguments: [
@@ -52,16 +61,31 @@ defmodule CliMate.UsageTest do
         another: [required: false]
       ]
     ]
+  end
 
-    usage = CLI.format_usage(command) |> stringify() |> tap(&IO.puts/1)
+  def some_default(_), do: nil
 
-    assert usage =~ "-l --lang <value> pick a language"
-    assert usage =~ "--otp-vsn <value> The OTP version."
+  test "usage block can be formatted" do
+    command = command_test_format()
+
+    usage = CLI.format_usage(command, io_columns: 9_999_999) |> stringify() |> tap(&IO.puts/1)
+
+    assert usage =~ "-l --lang <string> pick a language"
+    assert usage =~ "--otp-vsn <integer> The OTP version."
     assert usage =~ "--with-name <some-name>"
     assert usage =~ "--with-name-bool The doc_arg is not used"
-    assert usage =~ "--with-default <value> Some stuff. Defaults to nothing"
+    assert usage =~ "--with-default <string> Some stuff. Defaults to nothing"
     assert usage =~ "mix some.command [options] <name> [<other> [<another>]]"
-    assert usage =~ ~r"bool-with-default.*Defaults to true."
+    assert usage =~ ~r"bool-with-default\s*Defaults to true."
+    assert usage =~ "Dynamic default value."
+  end
+
+  test "usage block can be formatted for moduledoc" do
+    command = command_test_format()
+
+    usage = CLI.format_usage(command, format: :moduledoc)
+
+    IO.puts(usage)
   end
 
   test "usage block keeps options order" do

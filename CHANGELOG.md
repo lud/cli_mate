@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.0] - 2024-11-08
+
+### Features
+
+- Improved usage formatting with types and dynamic defaults
+- Allow customization of default value doc in usage blocks
+
+### Testing
+
+- Reorder tests
+
 ## [0.5.0] - 2024-06-26
 
 ### Features

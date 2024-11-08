@@ -165,7 +165,7 @@ defmodule CliMate do
 
       defmodule Option do
         @moduledoc false
-        @enforce_keys [:key, :doc, :type, :short, :default, :keep, :doc_arg]
+        @enforce_keys [:key, :doc, :type, :short, :default, :keep, :doc_arg, :default_doc]
         defstruct @enforce_keys
 
         @type vtype :: :integer | :float | :string | :count | :boolean
@@ -186,6 +186,7 @@ defmodule CliMate do
         doc = Keyword.get(conf, :doc, "")
         short = Keyword.get(conf, :short, nil)
         doc_arg = Keyword.get(conf, :doc_arg, Atom.to_string(type))
+        default_doc = Keyword.get(conf, :default_doc, nil)
 
         default =
           case Keyword.fetch(conf, :default) do
@@ -201,7 +202,8 @@ defmodule CliMate do
           short: short,
           default: default,
           keep: keep,
-          doc_arg: doc_arg
+          doc_arg: doc_arg,
+          default_doc: default_doc
         }
 
         {key, opt}
@@ -651,12 +653,6 @@ defmodule CliMate do
       defp format_usage_header(command, opts) do
         name = format_usage_command_name(command)
 
-        {title, padding} =
-          case opts.format do
-            :moduledoc -> {"## Usage", "    "}
-            _ -> {"Usage", "  "}
-          end
-
         optarray =
           case command do
             %{options: []} -> ""
@@ -669,7 +665,13 @@ defmodule CliMate do
             %{arguments: args} -> format_usage_args_list(args)
           end
 
-        [title, "\n\n", padding, name, optarray, argslist]
+        {title, code_block} =
+          case opts.format do
+            :moduledoc -> {"## Usage", ["```shell\n", name, optarray, argslist, "\n```"]}
+            _ -> {"Usage", ["  ", name, optarray, argslist]}
+          end
+
+        [title, "\n\n", code_block]
       end
 
       defp format_usage_command_name(command) do
@@ -691,6 +693,7 @@ defmodule CliMate do
               rest ->
                 Enum.map_join(rest, ".", &Macro.underscore/1)
             end
+
         end
       end
 
@@ -728,13 +731,15 @@ defmodule CliMate do
       end
 
       defp format_usage_opt_md({k, option}) do
-        %Option{type: t, short: s, key: k, doc: doc, default: default, doc_arg: doc_arg} = option
-
-        short =
-          case s do
-            nil -> []
-            _ -> ["`-", Atom.to_string(s), "`, "]
-          end
+        %Option{
+          type: t,
+          short: s,
+          key: k,
+          doc: doc,
+          default: default,
+          default_doc: default_doc,
+          doc_arg: doc_arg
+        } = option
 
         name = k |> Atom.to_string() |> String.replace("_", "-")
 
@@ -744,7 +749,15 @@ defmodule CliMate do
             _ -> [" <", doc_arg, ">"]
           end
 
-        long = ["`--", name, doc_arg, "`"]
+        short =
+          case s do
+            nil -> []
+            _ -> ["-", Atom.to_string(s), ", "]
+          end
+
+        long = ["--", name, doc_arg]
+
+        short_long = ["`", short, long, "`"]
 
         doc =
           case doc do
@@ -757,14 +770,22 @@ defmodule CliMate do
           case {k, default} do
             {:help, _} -> doc
             {_, :skip} -> doc
-            {_, {:default, v}} -> [doc, [" ", format_default_moduledoc(k, v)]]
+            {_, {:default, v}} -> [doc, [" ", format_default_moduledoc(k, v, default_doc)]]
           end
 
-        ["* ", short, long, doc, "\n"]
+        ["* ", short_long, doc, "\n"]
       end
 
       defp format_usage_opt({k, option}, max_opt, wrapping, pad_io) do
-        %Option{type: t, short: s, key: k, doc: doc, default: default, doc_arg: doc_arg} = option
+        %Option{
+          type: t,
+          short: s,
+          key: k,
+          doc: doc,
+          default: default,
+          default_doc: default_doc,
+          doc_arg: doc_arg
+        } = option
 
         short =
           case s do
@@ -784,9 +805,14 @@ defmodule CliMate do
 
         doc =
           case {k, default} do
-            {:help, _} -> doc
-            {_, :skip} -> ensure_final_dot(doc)
-            {_, {:default, v}} -> [ensure_final_dot(doc), " ", [format_default(k, v)]]
+            {:help, _} ->
+              doc
+
+            {_, :skip} ->
+              ensure_final_dot(doc)
+
+            {_, {:default, v}} ->
+              [ensure_final_dot(doc), " ", [format_default(k, v, default_doc)]]
           end
 
         wrapped_doc =
@@ -865,30 +891,40 @@ defmodule CliMate do
         _ in Protocol.UndefinedError -> inspect(term)
       end
 
-      defp format_default(k, value) when is_function(value, 1) do
+      defp format_default(k, value, default_doc) when is_binary(default_doc) do
+        ensure_final_dot(default_doc)
+      end
+
+      defp format_default(k, value, _) when is_function(value, 1) do
+        warn([
+          "Option ",
+          inspect(k),
+          " should document the default value using :default_doc option."
+        ])
+
         "Dynamic default value."
       end
 
-      defp format_default(_, value) do
+      defp format_default(_, value, _) do
         ["Defaults to ", ensure_string(value), "."]
       end
 
-      defp format_default_moduledoc(k, value) when is_function(value, 1) do
-        info = Function.info(value)
-
-        case Keyword.fetch!(info, :type) do
-          :external ->
-            module = Keyword.fetch!(info, :module)
-            name = Keyword.fetch!(info, :name)
-            ["Default value generated by `#{inspect(module)}.#{name}/1`."]
-
-          _ ->
-            format_default(k, value)
-        end
+      defp format_default_moduledoc(_, _, default_doc) when is_binary(default_doc) do
+        ensure_final_dot(default_doc)
       end
 
-      defp format_default_moduledoc(k, value) do
-        format_default(k, value)
+      defp format_default_moduledoc(k, value, _) when is_function(value, 1) do
+        warn([
+          "Option ",
+          inspect(k),
+          " should document the default value using :default_doc option."
+        ])
+
+        "Dynamic default value."
+      end
+
+      defp format_default_moduledoc(k, value, _) do
+        ["Defaults to `", inspect(value), "`."]
       end
     end
   end

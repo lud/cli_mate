@@ -48,11 +48,13 @@ defmodule CliMate.UsageTest do
         with_default_fun: [
           doc: "Some fun",
           # Output not tested but should not fail
-          default: fn k -> some_default(k) end
+          default: fn k -> some_default(k) end,
+          default_doc: "Function in test"
         ],
         with_default_capture: [
           doc: "Some fun",
-          default: &__MODULE__.some_default/1
+          default: &__MODULE__.some_default/1,
+          default_doc: "Function capture in test"
         ]
       ],
       arguments: [
@@ -77,7 +79,8 @@ defmodule CliMate.UsageTest do
     assert usage =~ "--with-default <string> Some stuff. Defaults to nothing"
     assert usage =~ "mix some.command [options] <name> [<other> [<another>]]"
     assert usage =~ ~r"bool-with-default\s*Defaults to true."
-    assert usage =~ "Dynamic default value."
+    assert usage =~ "Function in test."
+    assert usage =~ "Function capture in test."
   end
 
   test "usage block can be formatted for moduledoc" do

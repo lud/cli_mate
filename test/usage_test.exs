@@ -8,7 +8,6 @@ defmodule CliMate.UsageTest do
   def stringify(iodata) do
     iodata
     |> IO.ANSI.format()
-    |> IO.puts()
 
     iodata
     |> IO.ANSI.format(_emit = false)
@@ -70,7 +69,7 @@ defmodule CliMate.UsageTest do
   test "usage block can be formatted" do
     command = command_test_format()
 
-    usage = CLI.format_usage(command, io_columns: 9_999_999) |> stringify() |> tap(&IO.puts/1)
+    usage = CLI.format_usage(command, io_columns: 9_999_999) |> stringify()
 
     assert usage =~ "-l --lang <string> pick a language"
     assert usage =~ "--otp-vsn <integer> The OTP version."
@@ -86,9 +85,7 @@ defmodule CliMate.UsageTest do
   test "usage block can be formatted for moduledoc" do
     command = command_test_format()
 
-    usage = CLI.format_usage(command, format: :moduledoc)
-
-    IO.puts(usage)
+    _usage = CLI.format_usage(command, format: :moduledoc)
   end
 
   test "usage block keeps options order" do

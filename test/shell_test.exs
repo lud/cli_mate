@@ -27,17 +27,28 @@ defmodule CliMate.ShellTest do
   test "the default shell will not emit messages" do
     CLI.put_shell(CLI)
 
-    CLI.error("this is an error")
-    refute_receive {CLI, :error, "this is an error"}
+    stderr =
+      ExUnit.CaptureIO.capture_io(:stderr, fn ->
+        CLI.error("this is an error")
+        refute_receive {CLI, :error, "this is an error"}
 
-    CLI.debug("this is a debug message")
-    refute_receive {CLI, :debug, "this is a debug message"}
+        CLI.warn("this is a warning")
+        refute_receive {CLI, :warn, "this is a warning"}
+      end)
 
-    CLI.warn("this is a warning")
-    refute_receive {CLI, :warn, "this is a warning"}
+    stdout =
+      ExUnit.CaptureIO.capture_io(fn ->
+        CLI.debug("this is a debug message")
+        refute_receive {CLI, :debug, "this is a debug message"}
 
-    CLI.writeln("this is a normal message")
-    refute_receive {CLI, :info, "this is a normal message"}
+        CLI.writeln("this is a normal message")
+        refute_receive {CLI, :info, "this is a normal message"}
+      end)
+
+    assert stderr =~ "this is an error"
+    assert stderr =~ "this is a warning"
+    assert stdout =~ "this is a debug message"
+    assert stdout =~ "this is a normal message"
   end
 
   test "the shell can abort" do

@@ -693,7 +693,6 @@ defmodule CliMate do
               rest ->
                 Enum.map_join(rest, ".", &Macro.underscore/1)
             end
-
         end
       end
 

@@ -6,7 +6,8 @@ defmodule CliMate.UsageTest do
   def stringify(iodata) do
     iodata
     |> IO.ANSI.format()
-    |> IO.puts()
+
+    # |> IO.puts()
 
     iodata
     |> IO.ANSI.format(_emit = false)

@@ -85,27 +85,27 @@ defmodule CliMate.ParserTest do
     end
   end
 
-  describe "--help option" do
-    test "the --help option is always defined" do
+  describe "the --help option" do
+    test "is always defined" do
       assert {:ok, %{options: %{help: false}}} = CLI.parse(~w(), [])
       assert {:ok, %{options: %{help: true}}} = CLI.parse(~w(--help), [])
     end
 
-    test "the --help option will halt(0) with parse_or_halt!" do
+    test "will halt(0) with parse_or_halt!" do
       assert :halt = CLI.parse_or_halt!(~w(--help), [])
       {_, _, text} = assert_receive {:cli_mate_shell, :info, _text}
       assert text =~ "Usage"
       assert_receive {:cli_mate_shell, :halt, 0}
     end
 
-    test "the --help option ignore parsing of arguments" do
+    test "ignore parsing of arguments" do
       assert :halt = CLI.parse_or_halt!(~w(--help), arguments: [some_arg: []])
       {_, _, text} = assert_receive {:cli_mate_shell, :info, _text}
       assert text =~ "Usage"
       assert_receive {:cli_mate_shell, :halt, 0}
     end
 
-    test "the --help option cannot be overriden" do
+    test "cannot be overriden" do
       assert_raise ArgumentError, "the :help option cannot be overriden", fn ->
         CLI.parse(~w(--help 123), options: [help: [type: :integer]])
       end

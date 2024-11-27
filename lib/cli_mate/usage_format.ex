@@ -152,7 +152,7 @@ defmodule CliMate.UsageFormat do
     short =
       case s do
         nil -> "  "
-        _ -> [?-, Atom.to_string(s)]
+        _ -> ["-", Atom.to_string(s)]
       end
 
     name = k |> Atom.to_string() |> String.replace("_", "-")

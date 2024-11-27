@@ -1,9 +1,10 @@
 defmodule CliMate.ParserTest do
   use ExUnit.Case, async: true
+  alias CliMate.ProcessShell
   alias CliMate.CLI
 
   setup do
-    CLI.put_shell(CLI.ProcessShell)
+    CLI.put_shell(ProcessShell)
     :ok
   end
 
@@ -160,6 +161,14 @@ defmodule CliMate.ParserTest do
 
       opts = [arguments: [one: [cast: {__MODULE__, :cast_add_int, [10]}]]]
       assert {:ok, %{arguments: %{one: 11}}} = CLI.parse(~w(1), opts)
+    end
+
+    test "invalid cast return" do
+      opts = [arguments: [one: [cast: fn _ -> :NOT_A_RESULT_TUPLE end]]]
+
+      assert_raise RuntimeError, ~r/returned invalid value/, fn ->
+        CLI.parse(~w(1), opts)
+      end
     end
 
     def cast_add_int(v, add \\ 1) do

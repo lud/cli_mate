@@ -1,4 +1,6 @@
 defmodule CliMate.CLI do
+  alias CliMate.Option
+  alias CliMate.Command
   # -----------------------------------------------------------------------
   # Shell
   # -----------------------------------------------------------------------
@@ -112,184 +114,6 @@ defmodule CliMate.CLI do
   @spec _halt(integer) :: no_return()
   def _halt(n) do
     System.halt(n)
-  end
-
-  defmodule ProcessShell do
-    @tag :cli_mate_shell
-
-    @moduledoc """
-    An output shell implementation allowing your CLI commands to send their
-    output as messages to themselves. This is most useful for tests.
-
-    The process that will receive the messages is found by looking up the first
-    pid in the `:"$callers"` key of the process dictionary, or `self()` if there
-    is no caller.
-
-    Use `CliMate.put_shell(#{inspect(__MODULE__)})` to enable this shell.
-    """
-
-    IO.warn("@todo document that process shell will always tag messages with CliMate.CLI")
-
-    @doc false
-    def _print(_output, kind, iodata) do
-      send(message_target(), {@tag, kind, format_message(iodata)})
-    end
-
-    defp format_message(iodata) do
-      iodata
-      |> IO.ANSI.format(false)
-      |> :erlang.iolist_to_binary()
-    end
-
-    @doc """
-    Returns the pid of the process that will receive output messages.
-    """
-    def message_target do
-      case Process.get(:"$callers") do
-        [parent | _] -> parent
-        _ -> self()
-      end
-    end
-
-    def _halt(n) do
-      send(message_target(), {@tag, :halt, n})
-    end
-  end
-
-  # -----------------------------------------------------------------------
-  # Defining commands
-  # -----------------------------------------------------------------------
-
-  defmodule Option do
-    @moduledoc false
-    @enforce_keys [:key, :doc, :type, :short, :default, :keep, :doc_arg, :default_doc]
-    defstruct @enforce_keys
-
-    @type vtype :: :integer | :float | :string | :count | :boolean
-    @type t :: %__MODULE__{
-            key: atom,
-            doc: binary,
-            type: vtype,
-            short: atom,
-            default: term,
-            keep: boolean,
-            doc_arg: binary
-          }
-  end
-
-  defp build_option({key, conf}) when is_atom(key) and is_list(conf) do
-    keep = Keyword.get(conf, :keep, false)
-    type = Keyword.get(conf, :type, :string)
-    doc = Keyword.get(conf, :doc, "")
-    short = Keyword.get(conf, :short, nil)
-    doc_arg = Keyword.get(conf, :doc_arg, Atom.to_string(type))
-    default_doc = Keyword.get(conf, :default_doc, nil)
-
-    default =
-      case Keyword.fetch(conf, :default) do
-        {:ok, term} -> {:default, term}
-        :error when type == :boolean -> :skip
-        :error -> :skip
-      end
-
-    opt = %Option{
-      key: key,
-      doc: doc,
-      type: type,
-      short: short,
-      default: default,
-      keep: keep,
-      doc_arg: doc_arg,
-      default_doc: default_doc
-    }
-
-    {key, opt}
-  end
-
-  defmodule Argument do
-    @moduledoc false
-    @enforce_keys [:key, :required, :cast, :doc, :type]
-    defstruct @enforce_keys
-
-    @type vtype :: :integer | :float | :string
-    @type t :: %__MODULE__{
-            required: boolean,
-            key: atom,
-            type: vtype,
-            doc: binary,
-            cast: (term -> term) | {module, atom, [term]}
-          }
-  end
-
-  defp build_argument({key, conf}) when is_atom(key) and is_list(conf) do
-    required = Keyword.get(conf, :required, true)
-    cast = Keyword.get(conf, :cast, nil)
-
-    doc = Keyword.get(conf, :doc, "")
-    type = Keyword.get(conf, :type, :string)
-
-    validate_arg_type_spec(type)
-    validate_cast(cast)
-
-    %Argument{key: key, required: required, cast: cast, doc: doc, type: type}
-  end
-
-  defp validate_cast(cast) do
-    case cast do
-      f when is_function(f, 1) ->
-        :ok
-
-      nil ->
-        :ok
-
-      {m, f, a} when is_atom(m) and is_atom(f) and is_list(a) ->
-        :ok
-
-      _ ->
-        raise(
-          ArgumentError,
-          "Expected :cast function to be a valid cast function, got: #{inspect(cast)}"
-        )
-    end
-  end
-
-  defp validate_arg_type_spec(spec) do
-    unless spec in [:string, :float, :integer] do
-      raise ArgumentError,
-            "expected argument type to be one of :string, :float or :integer, got: #{inspect(spec)}"
-    end
-
-    :ok
-  end
-
-  defmodule Command do
-    @moduledoc false
-    @enforce_keys [:arguments, :options]
-    defstruct [:arguments, :options, :module, :name]
-
-    @type t :: %__MODULE__{
-            arguments: [Argument.t()],
-            options: [{atom, Option.t()}],
-            module: module | nil,
-            name: binary | nil
-          }
-  end
-
-  @help_option_def [type: :boolean, default: false, doc: "Displays this help."]
-
-  defp build_command(conf) do
-    options =
-      conf
-      |> Keyword.get(:options, [])
-      |> Keyword.update(:help, @help_option_def, fn _ ->
-        raise ArgumentError, "the :help option cannot be overriden"
-      end)
-      |> Enum.map(&build_option/1)
-
-    arguments = conf |> Keyword.get(:arguments, []) |> Enum.map(&build_argument/1)
-    name = conf |> Keyword.get(:name, nil)
-    module = conf |> Keyword.get(:module, nil)
-    %Command{options: options, arguments: arguments, name: name, module: module}
   end
 
   # -----------------------------------------------------------------------
@@ -424,7 +248,7 @@ defmodule CliMate.CLI do
       {:error, {:argument_cast, :date, :invalid_format}}
   """
   def parse(argv, command) when is_list(command) do
-    parse(argv, build_command(command))
+    parse(argv, Command.new(command))
   end
 
   def parse(argv, %Command{} = command) do
@@ -548,7 +372,7 @@ defmodule CliMate.CLI do
             {:error, {:argument_cast, key, reason}}
 
           other ->
-            {:error, {:argument_cast, key, {:bad_return, other}}}
+            raise "Argument custom caster #{inspect(cast)} returned invalid value: #{inspect(other)}"
         end
     end
   end
@@ -593,12 +417,12 @@ defmodule CliMate.CLI do
     apply(m, f, [value | a])
   end
 
-  defp format_reason({:argument_cast, key, reason}) do
-    ["error when casting argument ", Atom.to_string(key), ": ", ensure_string(reason)]
-  end
-
   defp format_reason({:argument_cast, key, {:bad_return, br}}) do
     ["could not cast argument ", Atom.to_string(key), " bad return: ", inspect(br)]
+  end
+
+  defp format_reason({:argument_cast, key, reason}) do
+    ["error when casting argument ", Atom.to_string(key), ": ", ensure_string(reason)]
   end
 
   defp format_reason({:invalid, invalid}) do
@@ -638,7 +462,7 @@ defmodule CliMate.CLI do
   def format_usage(command, opts \\ [])
 
   def format_usage(command, opts) when is_list(command) do
-    format_usage(build_command(command), opts)
+    format_usage(Command.new(command), opts)
   end
 
   def format_usage(%Command{} = command, opts) do
@@ -721,13 +545,15 @@ defmodule CliMate.CLI do
     {title, optsdoc} =
       case opts.format do
         :moduledoc -> {"## Options", Enum.map(options, &format_usage_opt_md(&1))}
-        f -> {"Options", Enum.map(options, &format_usage_opt(&1, max_opt, wrapping, pad_io))}
+        _ -> {"Options", Enum.map(options, &format_usage_opt(&1, max_opt, wrapping, pad_io))}
       end
 
-    opts = [title, "\n\n", optsdoc]
+    [title, "\n\n", optsdoc]
   end
 
-  defp format_usage_opt_md({k, option}) do
+  IO.warn("@todo custom usage formatter module")
+
+  defp format_usage_opt_md({_, option}) do
     %Option{
       type: t,
       short: s,
@@ -773,7 +599,7 @@ defmodule CliMate.CLI do
     ["* ", short_long, doc, "\n"]
   end
 
-  defp format_usage_opt({k, option}, max_opt, wrapping, pad_io) do
+  defp format_usage_opt({_, option}, max_opt, wrapping, pad_io) do
     %Option{
       type: t,
       short: s,
@@ -888,7 +714,7 @@ defmodule CliMate.CLI do
     _ in Protocol.UndefinedError -> inspect(term)
   end
 
-  defp format_default(k, value, default_doc) when is_binary(default_doc) do
+  defp format_default(_k, _value, default_doc) when is_binary(default_doc) do
     ensure_final_dot(default_doc)
   end
 
@@ -920,7 +746,7 @@ defmodule CliMate.CLI do
     "Dynamic default value."
   end
 
-  defp format_default_moduledoc(k, value, _) do
+  defp format_default_moduledoc(_, value, _) do
     ["Defaults to `", inspect(value), "`."]
   end
 end

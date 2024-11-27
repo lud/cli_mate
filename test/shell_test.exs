@@ -1,9 +1,10 @@
 defmodule CliMate.ShellTest do
   use ExUnit.Case, async: false
+  alias CliMate.ProcessShell
   alias CliMate.CLI
 
   setup do
-    CLI.put_shell(CLI.ProcessShell)
+    CLI.put_shell(ProcessShell)
     :ok
   end
 

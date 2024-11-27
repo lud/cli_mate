@@ -92,16 +92,16 @@ defmodule CliMate.ParserTest do
 
     test "the --help option will halt(0) with parse_or_halt!" do
       assert :halt = CLI.parse_or_halt!(~w(--help), [])
-      {_, _, text} = assert_receive {CLI, :info, _text}
+      {_, _, text} = assert_receive {:cli_mate_shell, :info, _text}
       assert text =~ "Usage"
-      assert_receive {CLI, :halt, 0}
+      assert_receive {:cli_mate_shell, :halt, 0}
     end
 
     test "the --help option ignore parsing of arguments" do
       assert :halt = CLI.parse_or_halt!(~w(--help), arguments: [some_arg: []])
-      {_, _, text} = assert_receive {CLI, :info, _text}
+      {_, _, text} = assert_receive {:cli_mate_shell, :info, _text}
       assert text =~ "Usage"
-      assert_receive {CLI, :halt, 0}
+      assert_receive {:cli_mate_shell, :halt, 0}
     end
 
     test "the --help option cannot be overriden" do
@@ -125,7 +125,7 @@ defmodule CliMate.ParserTest do
     test "the parse_or_halt! shortcut words" do
       opts = [arguments: [lang: [required: true]]]
       assert :halt = CLI.parse_or_halt!([], opts)
-      assert_receive {CLI, :halt, 1}
+      assert_receive {:cli_mate_shell, :halt, 1}
     end
 
     test "a command can have optional arguments" do

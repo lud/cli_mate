@@ -1,9 +1,7 @@
 defmodule CliMate.UsageTest do
   use ExUnit.Case, async: true
 
-  defmodule CLI do
-    use CliMate
-  end
+  alias CliMate.CLI
 
   def stringify(iodata) do
     iodata

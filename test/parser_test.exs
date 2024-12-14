@@ -1,9 +1,10 @@
 defmodule CliMate.ParserTest do
   use ExUnit.Case, async: true
+  alias CliMate.ProcessShell
   alias CliMate.CLI
 
   setup do
-    CLI.put_shell(CLI.ProcessShell)
+    CLI.put_shell(ProcessShell)
     :ok
   end
 
@@ -84,27 +85,27 @@ defmodule CliMate.ParserTest do
     end
   end
 
-  describe "--help option" do
-    test "the --help option is always defined" do
+  describe "the --help option" do
+    test "is always defined" do
       assert {:ok, %{options: %{help: false}}} = CLI.parse(~w(), [])
       assert {:ok, %{options: %{help: true}}} = CLI.parse(~w(--help), [])
     end
 
-    test "the --help option will halt(0) with parse_or_halt!" do
+    test "will halt(0) with parse_or_halt!" do
       assert :halt = CLI.parse_or_halt!(~w(--help), [])
-      {_, _, text} = assert_receive {CLI, :info, _text}
+      {_, _, text} = assert_receive {:cli_mate_shell, :info, _text}
       assert text =~ "Usage"
-      assert_receive {CLI, :halt, 0}
+      assert_receive {:cli_mate_shell, :halt, 0}
     end
 
-    test "the --help option ignore parsing of arguments" do
+    test "ignore parsing of arguments" do
       assert :halt = CLI.parse_or_halt!(~w(--help), arguments: [some_arg: []])
-      {_, _, text} = assert_receive {CLI, :info, _text}
+      {_, _, text} = assert_receive {:cli_mate_shell, :info, _text}
       assert text =~ "Usage"
-      assert_receive {CLI, :halt, 0}
+      assert_receive {:cli_mate_shell, :halt, 0}
     end
 
-    test "the --help option cannot be overriden" do
+    test "cannot be overriden" do
       assert_raise ArgumentError, "the :help option cannot be overriden", fn ->
         CLI.parse(~w(--help 123), options: [help: [type: :integer]])
       end
@@ -125,7 +126,7 @@ defmodule CliMate.ParserTest do
     test "the parse_or_halt! shortcut words" do
       opts = [arguments: [lang: [required: true]]]
       assert :halt = CLI.parse_or_halt!([], opts)
-      assert_receive {CLI, :halt, 1}
+      assert_receive {:cli_mate_shell, :halt, 1}
     end
 
     test "a command can have optional arguments" do
@@ -160,6 +161,14 @@ defmodule CliMate.ParserTest do
 
       opts = [arguments: [one: [cast: {__MODULE__, :cast_add_int, [10]}]]]
       assert {:ok, %{arguments: %{one: 11}}} = CLI.parse(~w(1), opts)
+    end
+
+    test "invalid cast return" do
+      opts = [arguments: [one: [cast: fn _ -> :NOT_A_RESULT_TUPLE end]]]
+
+      assert_raise RuntimeError, ~r/returned invalid value/, fn ->
+        CLI.parse(~w(1), opts)
+      end
     end
 
     def cast_add_int(v, add \\ 1) do

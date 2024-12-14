@@ -2,7 +2,7 @@ defmodule CliMate.MixProject do
   use Mix.Project
 
   @source_url "https://github.com/lud/cli_mate"
-  @version "0.6.0"
+  @version "1.0.0"
 
   def project do
     [
@@ -14,7 +14,9 @@ defmodule CliMate.MixProject do
       docs: docs(),
       versioning: versioning(),
       name: "CLI Mate",
-      package: package()
+      elixirc_paths: elixirc_paths(Mix.env()),
+      package: package(),
+      dialyzer: dialyzer()
     ]
   end
 
@@ -39,6 +41,9 @@ defmodule CliMate.MixProject do
       links: %{"GitHub" => @source_url, "Changelog" => "#{@source_url}/blob/main/CHANGELOG.md"}
     ]
   end
+
+  defp elixirc_paths(:dev), do: ["lib", "samples"]
+  defp elixirc_paths(_), do: ["lib"]
 
   defp docs do
     [
@@ -80,5 +85,15 @@ defmodule CliMate.MixProject do
       {_, 0} -> IO.puts("Updated CHANGELOG.md with #{vsn}")
       {out, _} -> {:error, "Could not update CHANGELOG.md:\n\n #{out}"}
     end
+  end
+
+  defp dialyzer do
+    [
+      flags: [:unmatched_returns, :error_handling, :unknown, :extra_return],
+      list_unused_filters: true,
+      plt_add_deps: :app_tree,
+      plt_add_apps: [:ex_unit, :mix],
+      plt_local_path: "_build/plts"
+    ]
   end
 end

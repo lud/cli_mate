@@ -464,6 +464,8 @@ defmodule CliMate.CLI do
   * `:format` - If `:moduledoc`, the formatted usage will be compatible for
     embedding in a `@moduledoc` attribute. Any other value will generate a
     simple terminal styled text. Defaults to `:cli`.
+  * `:io_columns` - Number of columns for the terminal, defaults to a call to
+    `:io.columns/0`. Only used when format is `:cli`.
   """
   def format_usage(command, opts \\ [])
 

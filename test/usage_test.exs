@@ -69,7 +69,7 @@ defmodule CliMate.UsageTest do
   test "usage block can be formatted" do
     command = command_test_format()
 
-    usage = CLI.format_usage(command) |> stringify()
+    usage = CLI.format_usage(command, io_columns: 9999) |> stringify()
 
     assert usage =~ "-l --lang <string> pick a language"
     assert usage =~ "--otp-vsn <integer> The OTP version."

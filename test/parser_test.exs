@@ -88,6 +88,26 @@ defmodule CliMate.ParserTest do
 
       assert {:ok, %{options: %{port: 3000, scheme: "https"}}} = CLI.parse([], opts)
     end
+
+    test "last flag wins when duplicate options are provided" do
+      opts = [options: [name: [short: :n]]]
+      assert {:ok, %{options: %{name: "one"}}} = CLI.parse(~w(--name one), opts)
+      assert {:ok, %{options: %{name: "two"}}} = CLI.parse(~w(--name one -n two), opts)
+
+      assert {:ok, %{options: %{name: "three"}}} =
+               CLI.parse(~w(--name one -n two --name three), opts)
+
+      assert {:ok, %{options: %{name: "four"}}} =
+               CLI.parse(~w(--name one -n two --name three -n four), opts)
+
+      # With the :keep flag
+      opts = [options: [name: [short: :n, keep: true]]]
+
+      assert {:ok, %{options: %{name: ["one"]}}} = CLI.parse(~w(--name one), opts)
+
+      assert {:ok, %{options: %{name: ["one", "two", "three", "four"]}}} =
+               CLI.parse(~w(--name one -n two --name three -n four), opts)
+    end
   end
 
   describe "the --help option" do

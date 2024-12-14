@@ -1,17 +1,21 @@
 # CliMate
 
+A Command-Line-Interface solution for Elixir.
+
 This library provides:
 
-* A command line options and arguments parser.
+* A command line options and arguments parser implemented as a lightweight
+  wrapper around [OptionParser](https://hexdocs.pm/elixir/OptionParser.html)
+  that allows to define options, documentation and arguments in one data
+  structure.
 * Shell helpers to format shell outputs for releases where `Mix` is not
   available.
-* Usage formatting and printing.
-
-The parser is a simple lightweight wrapper around
-[OptionParser](https://hexdocs.pm/elixir/OptionParser.html) that allows to
-define options, documentation and arguments in one data structure.
+* Usage formatting and printing for `--help` and `mix help`.
 
 
+## Table of contents
+
+- [Table of contents](#table-of-contents)
 - [Installation](#installation)
 - [Basic usage](#basic-usage)
   - [Describe a command](#describe-a-command)
@@ -20,16 +24,7 @@ define options, documentation and arguments in one data structure.
   - [Display the usage block](#display-the-usage-block)
 - [Migration to version 1.0.0](#migration-to-version-100)
 - [Building CLI applications in Elixir](#building-cli-applications-in-elixir)
-
-
-It also provides classic printing of "usage" for a command.
-
-This package is targeted at standalone mix commands, _i.e._ commands defined in
-packages installed globally (for instance `mix archive.install hex
-some_package`). Those packages do not contain their dependencies, and for that
-reason, all code defined in CliMate is injected in the consumer code.
-
-For this reason, CliMate only defines a small set of  features.
+- [Roadmap](#roadmap)
 
 
 ## Installation
@@ -204,3 +199,11 @@ with those commands in bash scripts.
 But for commands that are doing more, like deployments or asset bundling, or
 tools that run for a while like credo or dialyzer it is totally fine. And you
 get to write them with Elixir!
+
+## Roadmap
+
+We would like to support the following in future releases:
+
+* [ ] Merge code from Argument and Option to provide same capabilities of native
+  and custom type casting.
+* [ ] Support subcommands for escripts.

@@ -1,6 +1,29 @@
 defmodule CliMate.CLI do
   alias CliMate.UsageFormat
   alias CliMate.Command
+
+  @moduledoc """
+  Main API to interact with the command line.
+
+  ### Basic usage
+
+      import CliMate.CLI
+
+      def run(argv) do
+        command = [options: [verbose: [type: :boolean]], arguments: [n: [type: :integer]]]
+        %{options: opts, arguments: args} = parse_or_halt!(argv, command)
+
+        if opts.verbose do
+          writeln("Hello!")
+        end
+
+        case do_something_useful(args.n) do
+          :ok -> halt_success("Done!")
+          {:error, reason} -> halt_error(reason)
+        end
+      end
+  """
+
   # -----------------------------------------------------------------------
   # Shell
   # -----------------------------------------------------------------------
@@ -12,10 +35,14 @@ defmodule CliMate.CLI do
   Defines the current shell to send console messages to. Accepts either
   `#{inspect(__MODULE__)}` or `#{inspect(__MODULE__.ProcessShell)}`.
 
+  This is mostly done for testing. The default shell outputs to standard io as
+  you would expect.
+
   The shell is saved to `:persistent_term`, so shell should not be changed
-  repeatedly during runtime. This method of persistence is subject to change
-  and should not be relied on.
+  repeatedly during runtime. This method of persistence is subject to change and
+  should not be relied on.
   """
+  @doc section: :io
   def put_shell(module) do
     :persistent_term.put({__MODULE__, :shell}, module)
   end
@@ -23,6 +50,7 @@ defmodule CliMate.CLI do
   @doc """
   Returns the current shell to send output to.
   """
+  @doc section: :io
   def shell do
     :persistent_term.get({__MODULE__, :shell}, __MODULE__)
   end
@@ -32,6 +60,7 @@ defmodule CliMate.CLI do
   # -----------------------------------------------------------------------
 
   @doc false
+  @doc section: :io
   def _print(output, _kind, iodata) do
     IO.puts(output, IO.ANSI.format(iodata))
   end
@@ -42,7 +71,7 @@ defmodule CliMate.CLI do
 
   `color` should be a `IO.ANSI.format/2` compatible atom.
   """
-
+  @doc section: :io
   @spec color(iodata(), atom) :: [atom | [iodata | [:default_color | []]]]
   def color(iodata, color) when is_atom(color) do
     [color, iodata, :default_color]
@@ -60,6 +89,7 @@ defmodule CliMate.CLI do
   Outputs `iodata` to `stderr` in the current shell, formatted with bright
   red color.
   """
+  @doc section: :io
   def error(iodata) do
     shell()._print(:stderr, :error, [:bright, color(iodata, :red)])
   end
@@ -68,6 +98,7 @@ defmodule CliMate.CLI do
   Outputs `iodata` to `stderr` in the current shell, formatted with yellow
   color.
   """
+  @doc section: :io
   def warn(iodata) do
     shell()._print(:stderr, :warn, color(iodata, :yellow))
   end
@@ -75,6 +106,7 @@ defmodule CliMate.CLI do
   @doc """
   Outputs `iodata` in the current shell, formatted with cyan color.
   """
+  @doc section: :io
   def debug(iodata) do
     shell()._print(:stdio, :debug, color(iodata, :cyan))
   end
@@ -82,6 +114,7 @@ defmodule CliMate.CLI do
   @doc """
   Outputs `iodata` in the current shell, formatted with green color.
   """
+  @doc section: :io
   def success(iodata) do
     shell()._print(:stdio, :info, color(iodata, :green))
   end
@@ -89,6 +122,7 @@ defmodule CliMate.CLI do
   @doc """
   Outputs `iodata` in the current shell.
   """
+  @doc section: :io
   def writeln(iodata) do
     shell()._print(:stdio, :info, iodata)
   end
@@ -98,6 +132,7 @@ defmodule CliMate.CLI do
 
   If not provided, the return code will be `0`.
   """
+  @doc section: :io
   def halt(err_code \\ 0) when is_integer(err_code) do
     shell()._halt(err_code)
   end
@@ -106,6 +141,7 @@ defmodule CliMate.CLI do
   Combines `success/1` then `halt/1`. Halts the Erlang runtime with a `0`
   return code.
   """
+  @doc section: :io
   def halt_success(iodata) do
     success(iodata)
     halt(0)
@@ -115,6 +151,7 @@ defmodule CliMate.CLI do
   Combines `error/1` then `halt/1`. Halts the Erlang runtime with a `1`
   return code by default.
   """
+  @doc section: :io
   @spec halt_error(err_code :: integer, term) :: no_return()
   def halt_error(err_code \\ 1, iodata) do
     error(iodata)
@@ -147,48 +184,20 @@ defmodule CliMate.CLI do
   # -----------------------------------------------------------------------
 
   @doc """
-  Accepts the command line arguments and the definition of a command
-  (options, arguments, and metadata) and returns a parse result with values
-  extracted from the command line arguments.
+  Accepts the command line arguments and the definition of a command (options,
+  arguments, and metadata) and returns a parse result with flues extracted from
+  the command line arguments.
 
   ### Defining options
 
-  Options definitions is a `Keyword` whose keys are the option name, and
-  values are the options parameters. Note that keys with underscores like
-  `some_thing` define options in kebab case like `--some-thing`.
+  Options definitions is a `Keyword` whose keys are the option name, and values
+  are the options parameters. Note that keys with underscores like `some_thing`
+  define options in kebab case like `--some-thing`.
 
-  The following parameters are available:
-
-  - `:type` - Can be either `:boolean`, `:integer` or `:string`. The default
-    value is `:string`.
-  - `:short` - Defines the shortcut for the option, for instance `-p`
-    instead of `--port`.
-  - `:default` - Defines the default value if the corresponding option is
-    not defined in `argv`.See "Default values" below.
-  - `:doc` - Accepts a string that will be used when formatting the usage
-    block for the command.
+  The available settings for an option are described in the `CliMate.Option`
+  module.
 
   Note that the `:help` option is always defined and cannot be overridden.
-
-  ### Default values
-
-  Default values can be omitted, in that case, the option will not be
-  present at all if not provided in the command line.
-
-  When defined, a default value can be:
-
-  * A raw value, that is anything that is not a function. This value will be
-    used as the default value.
-  * A function of arity zero. This function will be called when the option
-    is not provided in the command line and the result value will be used as
-    the default value. For instance `fn -> 123 end` or `&default_age/0`.
-  * A function of arity one. This function will be called with the option
-    key as its argument. For instance, passing `&default_opt/1` as the
-    `:default` for an option definition allow to define the following
-    function:
-
-        defp default_opt(:port), do: 4000
-        defp default_opt(:scheme), do: "http"
 
   ### Options examples
 
@@ -229,22 +238,11 @@ defmodule CliMate.CLI do
 
   ### Defining arguments
 
-  Arguments can be defined in the same way, providing a `Keyword` where the
-  keys are the argument names and the values are the parameters.
+  Arguments can be defined in the same way as options, providing a `Keyword`
+  where the keys are the argument names and the values are the parameters.
 
-  ### Defining arguments
-
-  The following parameters are available:
-
-  - `:required` - A boolean marking the argument as required. **Note that
-    arguments are required by default**. Keys for optional arguments that
-    are not provided by the command line will not be defined in the results.
-  - `:cast` - Accepts a fun or a `{module, function, arguments}` tuple to
-    transform the argument value when parsing. The invoked function must
-    return a result tuple: `{:ok, _} | {:error, _}`.
-  - `:doc` - Accepts a string that will be used when formatting the usage
-    block for the command. Note that this is not currently implemented for
-    arguments.
+  The available settings for an argument are described in the `CliMate.Argument`
+  module.
 
   ### Arguments examples
 
@@ -273,6 +271,7 @@ defmodule CliMate.CLI do
       iex> parse(["not-a-date"], arguments: [date: [cast: cast]])
       {:error, {:argument_cast, :date, :invalid_format}}
   """
+  @doc section: :parser
   def parse(argv, command) when is_list(command) do
     parse(argv, Command.new(command))
   end
@@ -310,6 +309,7 @@ defmodule CliMate.CLI do
   In case of a parse error, this function will output the usage block
   followed by a formatted error message, and halt the Erlang runtime.
   """
+  @doc section: :parser
   def parse_or_halt!(argv, command) do
     case parse(argv, command) do
       {:ok, %{options: %{help: true}}} ->

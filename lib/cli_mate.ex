@@ -1,22 +1,45 @@
 defmodule CliMate do
-  @deprecated """
-  Including all CLI code in your own module is no longer supported and will be removedin a future release.
+  @moduledoc """
+  This module is the base namespace for the `:cli_mate` application.
 
-  Please see https://github.com/lud/cli_mate?tab=readme-ov-file#migration-to-version-100
+  Most interactions with this library will be made through the `CliMate.CLI`
+  module.
 
-  If you still want to extend the CLI module to add your own helpers, you can use the following:
+
+  ### Deprecation for `use CliMate` {: .warning}
+
+  Including all CLI code in your own module is no longer supported and will be
+  removedin a future release.
+
+  Please see
+  https://github.com/lud/cli_mate?tab=readme-ov-file#migration-to-version-100
+
+  If you still want to extend the CLI module to add your own helpers, you can use
+  the following:
 
       require CliMate
-      Climate.extend_cli()
+      CliMate.extend_cli()
 
-  This will delegate all the CLI exported functions into your module.
+  This will import and re-export all the CLI exported functions into your module.
   """
+
+  @deprecated "import or extend CliMate.CLI"
   defmacro __using__(_) do
     quote do
       CliMate.extend_cli()
     end
   end
 
+  @doc """
+  Imports and re-exports all `CliMate.CLI` functions in the calling module.
+
+  This is useful if you want to define a module where all your CLI helpers
+  reside, instead of calling, say, `writeln("hello")` from `CliMate.CLI` but
+  `fancy_subtitle("Hello!")` from `MyApp.CliHelpers`.
+
+  Although, it will be easier to debug and provide useful documentation if you
+  _do_ call the functions from their origin module.
+  """
   defmacro extend_cli do
     quote unquote: false do
       delegations = [

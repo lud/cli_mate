@@ -1,6 +1,6 @@
 defmodule CliMate.CLI do
-  alias CliMate.UsageFormat
   alias CliMate.Command
+  alias CliMate.UsageFormat
 
   @moduledoc """
   Main API to interact with the command line.

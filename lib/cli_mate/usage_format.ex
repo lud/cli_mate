@@ -1,6 +1,6 @@
 defmodule CliMate.UsageFormat do
-  alias CliMate.Option
   alias CliMate.Command
+  alias CliMate.Option
 
   @moduledoc false
 

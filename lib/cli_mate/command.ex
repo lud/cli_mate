@@ -1,6 +1,6 @@
 defmodule CliMate.Command do
-  alias CliMate.Option
   alias CliMate.Argument
+  alias CliMate.Option
 
   @moduledoc false
 

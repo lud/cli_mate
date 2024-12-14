@@ -1,8 +1,23 @@
 defmodule CliMate do
   @deprecated """
-  just import CliMate.CLI
+  Including all CLI code in your own module is no longer supported and will be removedin a future release.
+
+  Please see https://github.com/lud/cli_mate?tab=readme-ov-file#migration-to-version-100
+
+  If you still want to extend the CLI module to add your own helpers, you can use the following:
+
+      require CliMate
+      Climate.extend_cli()
+
+  This will delegate all the CLI exported functions into your module.
   """
   defmacro __using__(_) do
+    quote do
+      CliMate.extend_cli()
+    end
+  end
+
+  defmacro extend_cli do
     quote unquote: false do
       delegations = [
         color: 2,

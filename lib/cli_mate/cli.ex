@@ -115,9 +115,25 @@ defmodule CliMate.CLI do
   Combines `error/1` then `halt/1`. Halts the Erlang runtime with a `1`
   return code by default.
   """
+  @spec halt_error(err_code :: integer, term) :: no_return()
   def halt_error(err_code \\ 1, iodata) do
     error(iodata)
     halt(err_code)
+  end
+
+  @doc """
+  Returns a string representation of the given term, with fallback to
+  `Kernel.inspect/1`.
+  """
+  @spec safe_to_string(term) :: binary
+  def safe_to_string(term) when is_binary(term) do
+    term
+  end
+
+  def safe_to_string(term) do
+    to_string(term)
+  rescue
+    _ in Protocol.UndefinedError -> inspect(term)
   end
 
   @doc false
@@ -432,7 +448,7 @@ defmodule CliMate.CLI do
   end
 
   defp format_reason({:argument_cast, key, reason}) do
-    ["error when casting argument ", Atom.to_string(key), ": ", UsageFormat.ensure_string(reason)]
+    ["error when casting argument ", Atom.to_string(key), ": ", safe_to_string(reason)]
   end
 
   defp format_reason({:invalid, invalid}) do

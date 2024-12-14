@@ -48,12 +48,12 @@ defmodule CliMate.UsageTest do
           doc: "Some fun",
           # Output not tested but should not fail
           default: fn k -> some_default(k) end,
-          default_doc: "Function in test"
+          default_doc: "Function in test."
         ],
         with_default_capture: [
           doc: "Some fun",
           default: &__MODULE__.some_default/1,
-          default_doc: "Function capture in test"
+          default_doc: "Function capture in test."
         ]
       ],
       arguments: [

@@ -1,7 +1,12 @@
 defmodule CliMate.ParserTest do
   use ExUnit.Case, async: true
   alias CliMate.ProcessShell
-  alias CliMate.CLI
+  # alias CliMate.CLI
+
+  defmodule CLI do
+    require CliMate
+    CliMate.extend_cli()
+  end
 
   setup do
     CLI.put_shell(ProcessShell)

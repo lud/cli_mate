@@ -39,5 +39,5 @@ defmodule Mix.Tasks.Example do
 
   def cast_base("two"), do: {:ok, 2}
   def cast_base("eight"), do: {:ok, 8}
-  def cast_base(_), do: {:error, :invalid_base}
+  def cast_base(v), do: {:error, {:invalid_base, v}}
 end

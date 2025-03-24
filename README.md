@@ -22,7 +22,7 @@ This library provides:
   - [Provide options and arguments docs for `mix help`](#provide-options-and-arguments-docs-for-mix-help)
   - [Parse the command arguments](#parse-the-command-arguments)
   - [Display the usage block](#display-the-usage-block)
-- [Migration to version 1.0.0](#migration-to-version-100)
+- [Migration to version 0.7.0](#migration-to-version-070)
 - [Building CLI applications in Elixir](#building-cli-applications-in-elixir)
 - [Roadmap](#roadmap)
 
@@ -32,7 +32,7 @@ This library provides:
 ```elixir
 def deps do
   [
-    {:cli_mate, "~> 1.0",runtime: false},
+    {:cli_mate, "~> 1.1",runtime: false},
   ]
 end
 ```
@@ -168,7 +168,7 @@ Options
      --help        Displays this help.
   ```
 
-## Migration to version 1.0.0
+## Migration to version 0.7.0
 
 The orginal version of CliMate included the CLI code in a consumer module, using
 `use CliMate`. This allowed library authors to use CliMate in mix tasks that
@@ -178,9 +178,6 @@ way to use it anyway.
 
 But this solution had too much problems regarding code loading with the recent
 versions of Elixir. So we are stopping support for this feature.
-
-We have to bump the major version because this is a very important breaking
-change.
 
 The best way to provide commands with dependencies is to provide an
 [escript](https://hexdocs.pm/mix/main/Mix.Tasks.Escript.Build.html) or something
@@ -193,8 +190,8 @@ Note that due to the startup time of the BEAM, is is sometimes discouraged to
 build command line applications with Elixir.
 
 While the startup problem is real, this is only important for small utilities
-like `ls`, `grep` or `cat`. You surely do not want delay when piping or looping
-with those commands in bash scripts.
+like `ls`, `grep` or `cat`. You surely do not want that delay when piping or
+looping with those commands in bash scripts.
 
 But for commands that are doing more, like deployments or asset bundling, or
 tools that run for a while like credo or dialyzer it is totally fine. And you

@@ -4,30 +4,30 @@ All notable changes to this project will be documented in this file.
 
 ## [0.6.0] - 2024-11-08
 
-### Features
+### 🚀 Features
 
 - Improved usage formatting with types and dynamic defaults
 - Allow customization of default value doc in usage blocks
 
-### Testing
+### 🧪 Testing
 
 - Reorder tests
 
 ## [0.5.0] - 2024-06-26
 
-### Features
+### 🚀 Features
 
 - Added doc_arg spec option to command options
 
 ## [0.4.1] - 2024-06-15
 
-### Miscellaneous Tasks
+### ⚙️ Miscellaneous Tasks
 
 - Do not show default value for --help
 
 ## [0.4.0] - 2024-06-15
 
-### Features
+### 🚀 Features
 
 - Format boolean defaults in --help
 - Preserve options order in help doc
@@ -35,35 +35,35 @@ All notable changes to this project will be documented in this file.
 
 ## [0.3.2] - 2024-06-14
 
-### Documentation
+### 📚 Documentation
 
 - Document the ProcessShell module
 
 ## [0.3.1] - 2024-03-11
 
-### Miscellaneous Tasks
+### ⚙️ Miscellaneous Tasks
 
 - Update README.md version on release
 
 ## [0.3.0] - 2024-03-11
 
-### Features
+### 🚀 Features
 
 - [**breaking**] Boolean options do not default to false anymore
 
-### Testing
+### 🧪 Testing
 
 - Added tests for the --help option
 
 ## [0.2.1] - 2023-12-30
 
-### Miscellaneous Tasks
+### ⚙️ Miscellaneous Tasks
 
 - Added changelog
 
 ## [0.2.0] - 2023-12-30
 
-### Features
+### 🚀 Features
 
 - Allow functions to define option defaults
 

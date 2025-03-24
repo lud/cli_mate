@@ -98,7 +98,7 @@ defmodule CliMate.Argument do
   end
 
   defp validate_type(type) do
-    unless type in [:string, :float, :integer] do
+    if type not in [:string, :float, :integer] do
       raise ArgumentError,
             "expected argument type to be one of :string, :float or :integer, got: #{inspect(type)}"
     end

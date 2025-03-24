@@ -30,7 +30,9 @@ defmodule CliMate.Option do
   * `:keep` - A boolean. This flag is used with `OptionParser`. When `true`
     duplicate options will not override each other but will rather be
     accumulated in a list. The option value will always be a list even when
-    provided a single time in the command line arguments.
+    provided a single time in the command line arguments. The option will also
+    be present, as an empty list, if the option is not given in command line
+    arguments.
   * `:doc_arg` - A string to display in the usage block. Defaults the type of
     the option, as in:
 

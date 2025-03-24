@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.1] - 2025-03-24
+
+### 🐛 Bug Fixes
+
+- Fixed indentation in moduledoc format for multiline option docs
+
+### ⚙️ Miscellaneous Tasks
+
+- Update Elixir workflow (#17)
+
 ## [0.7.0] - 2025-03-24
 
 ### 🚀 Features

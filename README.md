@@ -32,7 +32,7 @@ This library provides:
 ```elixir
 def deps do
   [
-    {:cli_mate, "~> 1.1",runtime: false},
+    {:cli_mate, "~> 0.7",runtime: false},
   ]
 end
 ```

@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.0] - 2025-03-24
+
+### 🚀 Features
+
+- [**breaking**] Remove embeddable capability
+
+### 📚 Documentation
+
+- Writing more documentation for options
+
+### 🧪 Testing
+
+- Remove output from tests
+
+### ⚙️ Miscellaneous Tasks
+
+- Removed demo code
+- Update dependabot config
+- Update dependabot config (#3)
+- Setup dialyzer for CI
+- Update CI config (#5)
+- Deprecation message for embeedding
+- Configuration for credo
+- Update Elixir workflow (#9)
+- Update Elixir workflow (#10)
+- Update dependabot config (#12)
+- Update Elixir workflow (#16)
+
 ## [0.6.0] - 2024-11-08
 
 ### 🚀 Features

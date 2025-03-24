@@ -37,7 +37,6 @@ defmodule CliMate.UsageFormat.OptionFormatter.Markdown do
       end
 
     ["* ", short_long, doc, "\n"]
-    |> tap(&IO.puts/1)
   end
 
   defp name(%Option{key: k}) do

@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
 ### ⚙️ Miscellaneous Tasks
 
 - Update Elixir workflow (#17)
+- Cleanup debug output
 
 ## [0.7.0] - 2025-03-24
 

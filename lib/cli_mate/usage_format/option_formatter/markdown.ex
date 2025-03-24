@@ -26,7 +26,7 @@ defmodule CliMate.UsageFormat.OptionFormatter.Markdown do
       case doc do
         "" -> ""
         nil -> ""
-        text -> [" - ", text]
+        text -> ["- ", indent_lines_but_first(text, 2)]
       end
 
     doc =
@@ -37,6 +37,7 @@ defmodule CliMate.UsageFormat.OptionFormatter.Markdown do
       end
 
     ["* ", short_long, doc, "\n"]
+    |> tap(&IO.puts/1)
   end
 
   defp name(%Option{key: k}) do
@@ -62,5 +63,16 @@ defmodule CliMate.UsageFormat.OptionFormatter.Markdown do
 
   defp format_default_moduledoc(_, value, _) do
     ["Defaults to `", inspect(value), "`."]
+  end
+
+  defp indent_lines_but_first(text, indent) do
+    text = IO.iodata_to_binary(text)
+
+    [first | lines] = String.split(text, "\n")
+
+    indentation = String.duplicate(" ", indent)
+    lines = Enum.map(lines, &[indentation, &1])
+
+    Enum.intersperse([first | lines], ?\n)
   end
 end

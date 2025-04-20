@@ -1,6 +1,6 @@
 defmodule CliMate.CLI do
-  alias CliMate.Command
-  alias CliMate.UsageFormat
+  alias CliMate.CLI.Command
+  alias CliMate.CLI.UsageFormat
 
   @moduledoc """
   Main API to interact with the command line.
@@ -313,7 +313,7 @@ defmodule CliMate.CLI do
   def parse_or_halt!(argv, command) do
     case parse(argv, command) do
       {:ok, %{options: %{help: true}}} ->
-        writeln(format_usage(command))
+        writeln(format_usage(command, ansi_enabled: IO.ANSI.enabled?()))
         halt(0)
         :halt
 
@@ -321,7 +321,7 @@ defmodule CliMate.CLI do
         parsed
 
       {:error, reason} ->
-        writeln(format_usage(command))
+        writeln(format_usage(command, ansi_enabled: IO.ANSI.enabled?()))
         error(format_reason(reason))
         halt(1)
         :halt
@@ -377,10 +377,6 @@ defmodule CliMate.CLI do
     take_args(schemes, args, %{})
   end
 
-  defp take_args([%{required: true, key: key} | _], [], _acc) do
-    {:error, {:missing_argument, key}}
-  end
-
   defp take_args([scheme | schemes], [value | argv], acc) do
     %{key: key, cast: cast, type: t} = scheme
 
@@ -413,6 +409,10 @@ defmodule CliMate.CLI do
 
   defp take_args([%{required: false} | _], [], acc) do
     {:ok, acc}
+  end
+
+  defp take_args([%{required: true, key: key} | _], [], _acc) do
+    {:error, {:missing_argument, key}}
   end
 
   defp cast_arg_type(:string, value), do: {:ok, value}

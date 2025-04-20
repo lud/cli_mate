@@ -1,4 +1,4 @@
-defmodule CliMate.MixProject do
+defmodule CliMate.CLI.MixProject do
   use Mix.Project
 
   @source_url "https://github.com/lud/cli_mate"

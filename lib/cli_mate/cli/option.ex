@@ -1,4 +1,4 @@
-defmodule CliMate.Option do
+defmodule CliMate.CLI.Option do
   @moduledoc """
   Describes an option.
 
@@ -102,7 +102,7 @@ defmodule CliMate.Option do
     type = Keyword.get(conf, :type, :string)
     doc = Keyword.get(conf, :doc, "")
     short = Keyword.get(conf, :short, nil)
-    doc_arg = Keyword.get(conf, :doc_arg, Atom.to_string(type))
+    doc_arg = Keyword.get_lazy(conf, :doc_arg, fn -> default_doc_arg(type) end)
     default_doc = Keyword.get(conf, :default_doc, nil)
 
     default =
@@ -123,4 +123,10 @@ defmodule CliMate.Option do
       default_doc: default_doc
     }
   end
+
+  defp default_doc_arg(:integer), do: "integer"
+  defp default_doc_arg(:float), do: "float"
+  defp default_doc_arg(:string), do: "string"
+  defp default_doc_arg(:count), do: nil
+  defp default_doc_arg(:boolean), do: nil
 end

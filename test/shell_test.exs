@@ -1,6 +1,6 @@
-defmodule CliMate.ShellTest do
+defmodule CliMate.CLI.ShellTest do
   alias CliMate.CLI
-  alias CliMate.ProcessShell
+  alias CliMate.CLI.ProcessShell
   use ExUnit.Case, async: false
 
   setup do

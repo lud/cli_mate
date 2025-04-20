@@ -1,9 +1,8 @@
-defmodule CliMate.UsageTest do
+defmodule CliMate.CLI.UsageTest do
+  alias CliMate.CLI
   use ExUnit.Case, async: true
 
-  alias CliMate.CLI
-
-  def stringify(iodata) do
+  def no_ansi(iodata) do
     iodata
     |> IO.ANSI.format()
 
@@ -12,9 +11,6 @@ defmodule CliMate.UsageTest do
     iodata
     |> IO.ANSI.format(_emit = false)
     |> :erlang.iolist_to_binary()
-
-    # Remove duplicated spaces to ease assrting/matching on strings
-    |> String.replace(~r/ +/, " ")
   end
 
   defp command_test_format do
@@ -32,6 +28,11 @@ defmodule CliMate.UsageTest do
         diatribe: [
           doc:
             "This is a very long documentation line and it should be wrapped on multiple lines if the terminal is short."
+        ],
+        with_count_type: [
+          doc: "I count.",
+          type: :count,
+          doc_arg: "should not be shown"
         ],
         with_default: [
           doc: "Some stuff.",
@@ -66,26 +67,102 @@ defmodule CliMate.UsageTest do
 
   def some_default(_), do: nil
 
-  test "usage block can be formatted" do
+  test "usage block can be formatted in shell" do
     command = command_test_format()
 
-    usage = CLI.format_usage(command, io_columns: 9999) |> stringify()
+    usage = CLI.format_usage(command, io_columns: 70) |> no_ansi()
 
-    assert usage =~ "-l --lang <string> pick a language"
-    assert usage =~ "--otp-vsn <integer> The OTP version."
-    assert usage =~ "--with-name <some-name>"
-    assert usage =~ "--with-name-bool The doc_arg is not used"
-    assert usage =~ "--with-default <string> Some stuff. Defaults to nothing"
-    assert usage =~ "mix some.command [options] <name> [<other> [<another>]]"
-    assert usage =~ ~r"bool-with-default\s*Defaults to true."
-    assert usage =~ "Function in test."
-    assert usage =~ "Function capture in test."
+    expected = """
+    Usage
+
+      mix some.command [options] <name> [<other> [<another>]]
+
+    Options
+
+      -l, --lang <string>                   pick a language
+          --otp-vsn <integer>               The OTP version.
+          --with-name <some-name>
+          --with-name-bool                  The doc_arg is not used
+          --diatribe <string>               This is a very long
+                                            documentation line and it
+                                            should be wrapped on multiple
+                                            lines if the terminal is
+                                            short.
+          --with-count-type                 I count.
+          --with-default <string>           Some stuff. Defaults to
+                                            nothing.
+          --bool-with-default               Defaults to true.
+          --bool-bare
+          --with-default-fun <string>       Some fun Function in test.
+          --with-default-capture <string>   Some fun Function capture in
+                                            test.
+          --help                            Displays this help.
+    """
+
+    assert expected === no_ansi(usage)
+  end
+
+  test "use space if no option has short" do
+    command = command_test_format()
+    # Remove the lang option that has a short opt
+    options = List.keydelete(Keyword.fetch!(command, :options), :lang, 0)
+    command = Keyword.put(command, :options, options)
+
+    usage = CLI.format_usage(command, io_columns: 70) |> no_ansi()
+
+    expected = """
+    Usage
+
+      mix some.command [options] <name> [<other> [<another>]]
+
+    Options
+
+      --otp-vsn <integer>               The OTP version.
+      --with-name <some-name>
+      --with-name-bool                  The doc_arg is not used
+      --diatribe <string>               This is a very long documentation
+                                        line and it should be wrapped on
+                                        multiple lines if the terminal is
+                                        short.
+      --with-count-type                 I count.
+      --with-default <string>           Some stuff. Defaults to nothing.
+      --bool-with-default               Defaults to true.
+      --bool-bare
+      --with-default-fun <string>       Some fun Function in test.
+      --with-default-capture <string>   Some fun Function capture in test.
+      --help                            Displays this help.
+    """
+
+    assert expected === no_ansi(usage)
   end
 
   test "usage block can be formatted for moduledoc" do
     command = command_test_format()
 
-    _usage = CLI.format_usage(command, format: :moduledoc)
+    usage = CLI.format_usage(command, format: :moduledoc)
+
+    expected = """
+    ## Usage
+
+        mix some.command [options] <name> [<other> [<another>]]
+
+    ## Options
+
+    * `-l, --lang <string>` - pick a language
+    * `--otp-vsn <integer>` - The OTP version.
+    * `--with-name <some-name>`
+    * `--with-name-bool` - The doc_arg is not used
+    * `--diatribe <string>` - This is a very long documentation line and it should be wrapped on multiple lines if the terminal is short.
+    * `--with-count-type` - I count.
+    * `--with-default <string>` - Some stuff. Defaults to `"nothing"`.
+    * `--bool-with-default` Defaults to `true`.
+    * `--bool-bare`
+    * `--with-default-fun <string>` - Some fun Function in test.
+    * `--with-default-capture <string>` - Some fun Function capture in test.
+    * `--help` - Displays this help.
+    """
+
+    assert expected === IO.chardata_to_string(usage)
   end
 
   test "usage block keeps options order" do
@@ -101,7 +178,7 @@ defmodule CliMate.UsageTest do
 
     opts_doc =
       CLI.format_usage(command)
-      |> stringify()
+      |> no_ansi()
       |> String.split("\n")
       |> Enum.map(&String.trim/1)
       |> Enum.filter(&String.starts_with?(&1, "-"))

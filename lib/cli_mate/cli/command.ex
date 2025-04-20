@@ -1,6 +1,6 @@
-defmodule CliMate.Command do
-  alias CliMate.Argument
-  alias CliMate.Option
+defmodule CliMate.CLI.Command do
+  alias CliMate.CLI.Argument
+  alias CliMate.CLI.Option
 
   @moduledoc false
 
@@ -23,7 +23,7 @@ defmodule CliMate.Command do
       |> add_help()
       |> Enum.map(&build_option/1)
 
-    arguments = conf |> Keyword.get(:arguments, []) |> Enum.map(&build_argument/1)
+    arguments = conf |> Keyword.get(:arguments, []) |> build_args()
     name = conf |> Keyword.get(:name, nil)
     module = conf |> Keyword.get(:module, nil)
     %__MODULE__{options: options, arguments: arguments, name: name, module: module}
@@ -41,5 +41,28 @@ defmodule CliMate.Command do
   end
 
   defp build_option({key, conf}), do: {key, Option.new(key, conf)}
+
+  defp build_args(list) do
+    {args, _} =
+      Enum.map_reduce(list, nil, fn arg, last_unrequired ->
+        arg = build_argument(arg)
+
+        case arg do
+          %{required: true} when last_unrequired == nil ->
+            {arg, nil}
+
+          %{key: key, required: true} ->
+            raise ArgumentError,
+                  "non-required arguments must be defined after required ones " <>
+                    "but #{inspect(key)} was given after #{inspect(last_unrequired)}"
+
+          %{key: key, required: false} ->
+            {arg, key}
+        end
+      end)
+
+    args
+  end
+
   defp build_argument({key, conf}), do: Argument.new(key, conf)
 end

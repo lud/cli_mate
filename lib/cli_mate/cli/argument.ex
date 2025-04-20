@@ -1,4 +1,4 @@
-defmodule CliMate.Argument do
+defmodule CliMate.CLI.Argument do
   @moduledoc """
   Describes an argument.
 

@@ -1,12 +1,7 @@
-defmodule CliMate.ParserTest do
+defmodule CliMate.CLI.ParserTest do
+  alias CliMate.CLI
+  alias CliMate.CLI.ProcessShell
   use ExUnit.Case, async: true
-  alias CliMate.ProcessShell
-  # alias CliMate.CLI
-
-  defmodule CLI do
-    require CliMate
-    CliMate.extend_cli()
-  end
 
   setup do
     CLI.put_shell(ProcessShell)
@@ -143,6 +138,26 @@ defmodule CliMate.ParserTest do
       assert {:error, {:missing_argument, :lang}} = CLI.parse([], opts)
     end
 
+    test "non-required arguments should be last" do
+      opts = [arguments: [one: [], two: [required: false], three: []]]
+      assert_raise ArgumentError, ~r/:three was given after :two/, fn -> CLI.parse([], opts) end
+
+      # first late-required and closest non-required argument is used in error
+      # message. So here error is between :d and :e
+      opts = [
+        arguments: [
+          a: [],
+          b: [required: false],
+          c: [required: false],
+          d: [required: false],
+          e: [],
+          f: []
+        ]
+      ]
+
+      assert_raise ArgumentError, ~r/:e was given after :d/, fn -> CLI.parse([], opts) end
+    end
+
     test "extra arguments are an error" do
       opts = [arguments: [lang: [required: true]]]
       assert {:error, {:extra_argument, "elixir"}} = CLI.parse(~w(erlang elixir), opts)
@@ -161,20 +176,17 @@ defmodule CliMate.ParserTest do
       assert 0 = map_size(args)
     end
 
-    test "arguments can be required" do
+    test "arguments can be required or not" do
       opts = [arguments: [lang: [required: true]]]
       assert {:ok, %{arguments: %{lang: "erlang"}}} = CLI.parse(~w(erlang), opts)
 
-      opts = [arguments: [lang: [required: true]]]
+      # The default value for option required is true
+      opts = [arguments: [lang: []]]
       assert {:error, {:missing_argument, :lang}} = CLI.parse([], opts)
 
-      opts = [arguments: [lang: [required: false], platform: [required: true]]]
-
-      assert {:ok, %{arguments: %{lang: "erlang", platform: "otp"}}} =
-               CLI.parse(~w(erlang otp), opts)
-
-      opts = [arguments: [lang: [required: false], platform: [required: true]]]
-      assert {:error, {:missing_argument, :platform}} = CLI.parse(~w(erlang), opts)
+      # 2nd is not required
+      opts = [arguments: [lang: [], platform: [required: false]]]
+      assert {:ok, %{arguments: %{lang: "erlang"}}} = CLI.parse(~w(erlang), opts)
     end
 
     test "the arguments can be casted" do

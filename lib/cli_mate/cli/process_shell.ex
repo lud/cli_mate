@@ -1,4 +1,4 @@
-defmodule CliMate.ProcessShell do
+defmodule CliMate.CLI.ProcessShell do
   @tag :cli_mate_shell
 
   @moduledoc """

@@ -96,12 +96,12 @@ We can now declare the documentation for the module:
   """
 ```
 
-This will output something like that (with colors now shown here):
+This will output something like that (but with colors):
 
 ```
 %> mix help example
 
-                       mix example
+                                  mix example
 
 Formats an integer in base two or eight
 
@@ -111,8 +111,7 @@ Formats an integer in base two or eight
 
 ## Options
 
-  • -v, --verbose - Output debug info about the
-    command. Defaults to false.
+  • -v, --verbose - Output debug info about the command. Defaults to false.
   • --help - Displays this help.
 
 Location: _build/dev/lib/cli_mate/ebin

@@ -6,8 +6,6 @@ defmodule CliMate.CLI.UsageTest do
     iodata
     |> IO.ANSI.format()
 
-    # |> IO.puts()
-
     iodata
     |> IO.ANSI.format(_emit = false)
     |> :erlang.iolist_to_binary()
@@ -100,6 +98,7 @@ defmodule CliMate.CLI.UsageTest do
           --with-default-fun <string>       Some fun Function in test.
           --with-default-capture <string>   Some fun Function capture in
                                             test.
+          --with-nil-default <string>       Defaults to nil.
           --help                            Displays this help.
     """
 
@@ -134,6 +133,7 @@ defmodule CliMate.CLI.UsageTest do
       --bool-bare
       --with-default-fun <string>       Some fun Function in test.
       --with-default-capture <string>   Some fun Function capture in test.
+      --with-nil-default <string>       Defaults to nil.
       --help                            Displays this help.
     """
 
@@ -163,6 +163,7 @@ defmodule CliMate.CLI.UsageTest do
     * `--bool-bare`
     * `--with-default-fun <string>` - Some fun Function in test.
     * `--with-default-capture <string>` - Some fun Function capture in test.
+    * `--with-nil-default <string>` Defaults to `nil`.
     * `--help` - Displays this help.
     """
 

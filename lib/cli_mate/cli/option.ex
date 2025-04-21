@@ -5,8 +5,8 @@ defmodule CliMate.CLI.Option do
   When declaring a command, the `:options` entry is a keyword list that accepts
   these settings, all optional:
 
-  * `:type` - `CliMate` uses the `OptionParser` module under the hood, so the
-    following types are accepted:
+  * `:type` - Uses the `OptionParser` module under the hood, so the following
+    types are accepted:
     * `:boolean` - If the default value is `true`, `OptionParser` supports the
       `--no-` prefix to the options.
     * `:count` - Counts the number of times the flag is given.
@@ -49,9 +49,9 @@ defmodule CliMate.CLI.Option do
   ### Default values
 
   Default values can be omitted, in that case, the option will not be present at
-  all when `CliMate.CLI.parse/2` will be called. This is especially important
-  for booleans, where one would expect that they automatically default to false.
-  It is not the case.
+  all when parsing the command line arguments. This is especially important for
+  booleans, where one would expect that they automatically default to false. It
+  is not the case.
 
   When defined, a default value can be:
 

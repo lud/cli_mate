@@ -193,6 +193,6 @@ defmodule CliMate.CLI.UsageFormat.OptionFormatter.PlainText do
   end
 
   defp format_default(_, value, _) do
-    ["Defaults to ", CliMate.CLI.safe_to_string(value), "."]
+    ["Defaults to ", inspect(value), "."]
   end
 end

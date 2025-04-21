@@ -17,8 +17,8 @@ defmodule CliMate do
   If you still want to extend the CLI module to add your own helpers, you can use
   the following:
 
-      require CliMate
-      CliMate.extend_cli()
+      require CliMate.CLI
+      CliMate.CLI.extend()
 
   This will import and re-export all the CLI exported functions into your module.
   """
@@ -30,46 +30,11 @@ defmodule CliMate do
     end
   end
 
-  @doc """
-  Imports and re-exports all `CliMate.CLI` functions in the calling module.
-
-  This is useful if you want to define a module where all your CLI helpers
-  reside, instead of calling, say, `writeln("hello")` from `CliMate.CLI` but
-  `fancy_subtitle("Hello!")` from `MyApp.CliHelpers`.
-
-  Although, it will be easier to debug and provide useful documentation if you
-  _do_ call the functions from their origin module.
-  """
+  @doc false
   defmacro extend_cli do
-    quote unquote: false do
-      delegations = [
-        color: 2,
-        debug: 1,
-        error: 1,
-        format_usage: 1,
-        format_usage: 2,
-        halt: 0,
-        halt: 1,
-        halt_error: 1,
-        halt_error: 2,
-        halt_success: 1,
-        parse: 2,
-        parse_or_halt!: 2,
-        put_shell: 1,
-        shell: 0,
-        success: 1,
-        warn: 1,
-        writeln: 1
-      ]
-
-      Enum.each(delegations, fn
-        {fun, 0} ->
-          defdelegate unquote(fun)(), to: CliMate.CLI
-
-        {fun, arity} ->
-          args = Enum.map(1..arity, &Macro.var(:"arg#{&1}", __MODULE__))
-          defdelegate unquote(fun)(unquote_splicing(args)), to: CliMate.CLI
-      end)
+    quote do
+      require CliMate.CLI
+      CliMate.CLI.extend()
     end
   end
 end

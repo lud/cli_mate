@@ -7,7 +7,7 @@ defmodule CliMate.CLI do
 
   ### Basic usage
 
-      import CliMate.CLI
+      import #{inspect(__MODULE__)}
 
       def run(argv) do
         command = [options: [verbose: [type: :boolean]], arguments: [n: [type: :integer]]]
@@ -194,8 +194,8 @@ defmodule CliMate.CLI do
   are the options parameters. Note that keys with underscores like `some_thing`
   define options in kebab case like `--some-thing`.
 
-  The available settings for an option are described in the `CliMate.Option`
-  module.
+  The available settings for an option are described in the
+  `#{inspect(__MODULE__)}.Option` module.
 
   Note that the `:help` option is always defined and cannot be overridden.
 
@@ -241,8 +241,8 @@ defmodule CliMate.CLI do
   Arguments can be defined in the same way as options, providing a `Keyword`
   where the keys are the argument names and the values are the parameters.
 
-  The available settings for an argument are described in the `CliMate.Argument`
-  module.
+  The available settings for an argument are described in the
+  `#{inspect(__MODULE__)}.Argument` module.
 
   ### Arguments examples
 
@@ -491,5 +491,44 @@ defmodule CliMate.CLI do
 
   def format_usage(%Command{} = command, opts) do
     UsageFormat.format_command(command, opts)
+  end
+
+  @doc """
+  Delegates all `#{inspect(__MODULE__)}` functions from the calling module.
+
+  This is useful if you want to define a module where all your CLI helpers
+  reside, instead of calling, say, `writeln("hello")` from
+  `#{inspect(__MODULE__)}` but `fancy_subtitle("Hello!")` from
+  `MyApp.CliHelpers`.
+  """
+  defmacro extend do
+    parent = __MODULE__
+
+    quote bind_quoted: binding() do
+      delegations =
+        parent.module_info(:exports) --
+          [
+            __info__: 1,
+            _halt: 1,
+            _print: 3,
+            module_info: 0,
+            module_info: 1,
+            safe_to_string: 1,
+            "MACRO-extend": 1
+          ]
+
+      Enum.each(delegations, fn
+        {fun, 0} ->
+          @doc_if_moduledoc "Delegated to `#{inspect(CliMate.CLI)}.#{fun}/0`"
+          @doc @doc_if_moduledoc
+          defdelegate unquote(fun)(), to: CliMate.CLI
+
+        {fun, arity} ->
+          @doc_if_moduledoc "Delegated to `#{inspect(CliMate.CLI)}.#{fun}/#{arity}`"
+          @doc @doc_if_moduledoc
+          args = Enum.map(1..arity, &Macro.var(:"arg#{&1}", __MODULE__))
+          defdelegate unquote(fun)(unquote_splicing(args)), to: CliMate.CLI
+      end)
+    end
   end
 end

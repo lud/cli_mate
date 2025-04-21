@@ -55,6 +55,10 @@ defmodule CliMate.CLI.UsageTest do
           doc: "Some fun",
           default: &__MODULE__.some_default/1,
           default_doc: "Function capture in test."
+        ],
+        with_nil_default: [
+          type: :string,
+          default: nil
         ]
       ],
       arguments: [
@@ -90,7 +94,7 @@ defmodule CliMate.CLI.UsageTest do
                                             short.
           --with-count-type                 I count.
           --with-default <string>           Some stuff. Defaults to
-                                            nothing.
+                                            "nothing".
           --bool-with-default               Defaults to true.
           --bool-bare
           --with-default-fun <string>       Some fun Function in test.
@@ -125,7 +129,7 @@ defmodule CliMate.CLI.UsageTest do
                                         multiple lines if the terminal is
                                         short.
       --with-count-type                 I count.
-      --with-default <string>           Some stuff. Defaults to nothing.
+      --with-default <string>           Some stuff. Defaults to "nothing".
       --bool-with-default               Defaults to true.
       --bool-bare
       --with-default-fun <string>       Some fun Function in test.

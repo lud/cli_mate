@@ -30,9 +30,10 @@ defmodule CliMate.CLI.Argument do
   #### Returning errors
 
   Cast functions must return `{:ok, value}` or `{:error, reason}`. The `reason`
-  can be anything, but at the moment CliMate does no spcial formatting on it to
-  display errors (besides calling `to_string/1` with a safe fallback to
-  `inspect/1`). It is advised to return a meaninful error message as the reason.
+  can be anything, but at the moment CliMate doesn't do any special formatting
+  on it to display errors (besides calling `to_string/1` with a safe fallback to
+  `inspect/1`). It is advised to return a meaningful error message as the
+  reason.
 
   #### Compilation commands
 
@@ -62,7 +63,7 @@ defmodule CliMate.CLI.Argument do
           required: boolean,
           type: vtype,
           doc: binary,
-          cast: (term -> {:ok, term} | {:error, term}) | {module, atom, [term]}
+          cast: nil | (term -> {:ok, term} | {:error, term}) | {module, atom, [term]}
         }
 
   def new(key, conf) when is_atom(key) and is_list(conf) do
@@ -90,13 +91,12 @@ defmodule CliMate.CLI.Argument do
         :ok
 
       _ ->
-        raise(
-          ArgumentError,
-          "Expected :cast function to be a valid cast function, got: #{inspect(cast)}"
-        )
+        raise ArgumentError,
+              "Expected :cast function to be a valid cast function, got: #{inspect(cast)}"
     end
   end
 
+  # We only support raw types for now
   defp validate_type(type) do
     if type not in [:string, :float, :integer] do
       raise ArgumentError,

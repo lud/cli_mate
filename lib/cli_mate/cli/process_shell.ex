@@ -9,18 +9,18 @@ defmodule CliMate.CLI.ProcessShell do
   pid in the `:"$callers"` key of the process dictionary, or `self()` if there
   is no caller.
 
-  Use `CliMate.put_shell(#{inspect(__MODULE__)})` to enable this shell.
+  Use `#{inspect(CliMate.CLI)}.put_shell(#{inspect(__MODULE__)})` to enable this shell.
 
   This shell is called when calling one of:
 
-  * `CliMate.CLI.error/1
-  * `CliMate.CLI.warn/1
-  * `CliMate.CLI.debug/1
-  * `CliMate.CLI.success/1
-  * `CliMate.CLI.writeln/1
-  * `CliMate.CLI.halt_success/1
-  * `CliMate.CLI.halt_error/1
-  * `CliMate.CLI.halt_error/2
+  * `#{inspect(CliMate.CLI)}.error/1
+  * `#{inspect(CliMate.CLI)}.warn/1
+  * `#{inspect(CliMate.CLI)}.debug/1
+  * `#{inspect(CliMate.CLI)}.success/1
+  * `#{inspect(CliMate.CLI)}.writeln/1
+  * `#{inspect(CliMate.CLI)}.halt_success/1
+  * `#{inspect(CliMate.CLI)}.halt_error/1
+  * `#{inspect(CliMate.CLI)}.halt_error/2
 
   A message of type `t:shell_message/0` will be sent to `self()`, or the caller
   process for `Task.async/1` and similar task functions.

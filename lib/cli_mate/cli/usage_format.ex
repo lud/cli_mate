@@ -3,6 +3,8 @@ defmodule CliMate.CLI.UsageFormat do
   alias CliMate.CLI.UsageFormat.OptionFormatter.Markdown
   alias CliMate.CLI.UsageFormat.OptionFormatter.PlainText
 
+  @moduledoc false
+
   @type fmt_opt :: {:io_columns, pos_integer} | {:ansi_enabled, boolean}
   @type fmt_opts :: [fmt_opt]
 
@@ -16,8 +18,6 @@ defmodule CliMate.CLI.UsageFormat do
   options are an empty list.
   """
   @callback format_options(command :: Command.t(), fmt_opts) :: iodata()
-
-  @moduledoc false
 
   defp adapter(opts) do
     case Keyword.fetch!(opts, :format) do

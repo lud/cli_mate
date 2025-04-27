@@ -22,6 +22,7 @@ This library provides:
   - [Provide options and arguments docs for `mix help`](#provide-options-and-arguments-docs-for-mix-help)
   - [Parse the command arguments](#parse-the-command-arguments)
   - [Display the usage block](#display-the-usage-block)
+- [Migration to version 0.8.0](#migration-to-version-080)
 - [Migration to version 0.7.0](#migration-to-version-070)
 - [Building CLI applications in Elixir](#building-cli-applications-in-elixir)
 - [Roadmap](#roadmap)
@@ -165,6 +166,52 @@ Options
   -v, --verbose   Output debug info about the command. Defaults to false.
       --help      Displays this help.
   ```
+
+## Migration to version 0.8.0
+
+Support for installable mix tasks is back, but now relies on code generation.
+
+If your library was intended to be installed like this:
+
+    mix archive.install hex your_library
+
+This would not work when using CliMate because it would not embed the CLI code
+in your code directly on compilation. This was dropped because maintenance of a
+full library wrapped in a `quote do` block was not perennial.
+
+Since version 0.8.0, the `mix cli.embed` task will generate the CLI code
+directly into your library:
+
+    mix cli.embled MyApp.CLI lib/my_app/cli
+
+Make sure to read the different options by calling `mix help cli.embed`.
+
+When using code generation, CliMate should now be used as a dev dependency:
+
+```elixir
+def deps do
+  [
+    {:cli_mate, "~> 0.7", only: [:dev, :test], runtime: false},
+  ]
+end
+```
+
+Note that this is fully optional. If you are writing a mix task that can just
+be installed as a regular dependency in other projects, that mix task can use
+dependencies such as CliMate just as usual.
+
+Code generation is intended to be used by mix tasks that are best used as
+globally installed tasks, or escripts, but that still need to be able to load
+mix projects (by loading `mix.exs` and projects code).
+
+For regular applications that were using CliMate with either `use CliMate` or
+`CliMate.extend_cli()`, there is a single change to perform, that is replacing
+that line with :
+
+```elixir
+require CliMate.CLI
+CliMate.CLI.extend()
+```
 
 ## Migration to version 0.7.0
 

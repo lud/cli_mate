@@ -10,8 +10,7 @@ if Mix.env() != :prod do
                  short: :v,
                  type: :boolean,
                  default: false,
-                 #  doc: "Output debug info about the command."
-                 doc: "Output debug info about the command.#{List.duplicate(" a", 100)}"
+                 doc: "Output debug info about the command."
                ]
              ],
              arguments: [

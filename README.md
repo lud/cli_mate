@@ -162,9 +162,8 @@ Usage
 
 Options
 
-  -v --verbose     Output debug info about the command.
-                   Defaults to false.
-     --help        Displays this help.
+  -v, --verbose   Output debug info about the command. Defaults to false.
+      --help      Displays this help.
   ```
 
 ## Migration to version 0.7.0

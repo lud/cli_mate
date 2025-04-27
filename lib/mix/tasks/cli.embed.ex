@@ -8,13 +8,13 @@ defmodule Mix.Tasks.Cli.Embed do
                type: :boolean,
                default: false,
                doc: """
-               When true, the base CLI module will be defined as <prefix>.Base
+               When true, the base CLI module will be defined as `<prefix>.Base`
                and will export an extend/0 macro. You will have to define your
-               main CLI module and call require(<prefix>.Base).extend() from
+               main CLI module and call `require(<prefix>.Base).extend()` from
                there.
 
                When false, the command will define the main CLI module as
-               <prefix> directly. The extend/0 macro is still included.
+               `<prefix>` directly. The `extend/0` macro is still included.
                """
              ],
              moduledoc: [

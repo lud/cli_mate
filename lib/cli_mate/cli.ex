@@ -389,7 +389,7 @@ defmodule CliMate.CLI do
 
     case cast_arg_type(t, value) do
       :error ->
-        {:error, {:argument_type, key, "Invalid argument #{key}, expected type #{t}"}}
+        {:error, {:argument_type, key, t}}
 
       {:ok, value} ->
         case apply_cast(cast, value) do
@@ -458,6 +458,10 @@ defmodule CliMate.CLI do
     ["error when casting argument ", Atom.to_string(key), ": ", safe_to_string(reason)]
   end
 
+  defp format_reason({:argument_type, key, type}) do
+    ["invalid argument ", Atom.to_string(key), ", expected type ", Atom.to_string(type)]
+  end
+
   defp format_reason({:invalid, invalid}) do
     invalid |> Enum.map(fn {k, _v} -> "invalid option #{k}" end) |> Enum.intersperse("\n")
   end
@@ -468,10 +472,6 @@ defmodule CliMate.CLI do
 
   defp format_reason({:missing_argument, key}) do
     ["missing argument ", Atom.to_string(key)]
-  end
-
-  defp format_reason(other) do
-    inspect(other)
   end
 
   # -----------------------------------------------------------------------

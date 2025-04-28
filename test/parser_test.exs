@@ -220,9 +220,7 @@ defmodule CliMate.CLI.ParserTest do
     test "arguments can have type" do
       opts = [arguments: [one: [type: :integer]]]
       assert {:ok, %{arguments: %{one: 1}}} = CLI.parse(~w(1), opts)
-
-      assert {:error, {:argument_type, :one, "Invalid argument one, expected type integer"}} =
-               CLI.parse(~w(hello), opts)
+      assert {:error, {:argument_type, :one, :integer}} = CLI.parse(~w(hello), opts)
     end
 
     test "arguments types are from a shortlist" do

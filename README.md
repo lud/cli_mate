@@ -1,31 +1,13 @@
 # CliMate
 
-A Command-Line-Interface solution for Elixir.
+A lightweight, flexible Command-Line-Interface toolkit for Elixir applications.
 
-This library provides:
+## Features
 
-* A command line options and arguments parser implemented as a lightweight
-  wrapper around [OptionParser](https://hexdocs.pm/elixir/OptionParser.html)
-  that allows to define options, documentation and arguments in one data
-  structure.
-* Shell helpers to format shell outputs for releases where `Mix` is not
-  available.
-* Usage formatting and printing for `--help` and `mix help`.
-
-
-## Table of contents
-
-- [Table of contents](#table-of-contents)
-- [Installation](#installation)
-- [Basic usage](#basic-usage)
-  - [Describe a command](#describe-a-command)
-  - [Parse the command arguments](#parse-the-command-arguments)
-  - [Display the usage block](#display-the-usage-block)
-  - [Provide options and arguments docs for `mix help`](#provide-options-and-arguments-docs-for-mix-help)
-- [Migration to version 0.8.0](#migration-to-version-080)
-- [Migration to version 0.7.0](#migration-to-version-070)
-- [Building CLI applications in Elixir](#building-cli-applications-in-elixir)
-- [Roadmap](#roadmap)
+* Command line options and arguments parser that extends [OptionParser](https://hexdocs.pm/elixir/OptionParser.html)
+* Shell helpers for formatted output in releases where `Mix` is unavailable
+* Automatic usage formatting for `--help` and `mix help` commands
+* Support for custom type casting and validation
 
 
 ## Installation
@@ -33,163 +15,78 @@ This library provides:
 ```elixir
 def deps do
   [
-    {:cli_mate, "~> 0.7", runtime: false},
+    {:cli_mate, "~> 0.8", runtime: false},
   ]
 end
 ```
 
-## Basic usage
+## Documentation
 
-To illustrate how this library works we will implement an example Mix task that
-prints an integer in base 2 or 8.
+Detailed documentation is available on [HexDocs](https://hexdocs.pm/cli_mate):
+
+* [Getting Started](https://hexdocs.pm/cli_mate/getting_started.html) - Getting started with CliMate
+
+## Table of Contents
+
+- [Features](#features)
+- [Installation](#installation)
+- [Documentation](#documentation)
+- [Table of Contents](#table-of-contents)
+- [Quick Example](#quick-example)
+- [Building CLI Applications in Elixir](#building-cli-applications-in-elixir)
+- [Migration to version 0.8.0](#migration-to-version-080)
+- [Migration to version 0.7.0](#migration-to-version-070)
+- [Roadmap](#roadmap)
+- [License](#license)
 
 
-The first step is to declare the module as a Mix task and alias the
-`CliMate.CLI` module (or import it!).
+## Quick Example
 
 ```elixir
 defmodule Mix.Tasks.Example do
-  alias CliMate.CLI
+  import CliMate.CLI
   use Mix.Task
 
-  # ...
+  @command name: "mix example",
+           module: __MODULE__,
+           options: [
+             verbose: [
+               short: :v,
+               type: :boolean,
+               default: false,
+               doc: "Output debug info."
+             ]
+           ],
+           arguments: [
+             n: [type: :integer, doc: "The value to process."]
+           ]
+
+  @impl true
+  def run(argv) do
+    command = parse_or_halt!(argv, @command)
+
+    if command.options.verbose do
+      writeln("Hello!")
+    end
+
+    SomeModule.do_something_with(command.arguments.n)
+  end
 end
 ```
 
-### Describe a command
 
-Then we define a command in our module. That command can be defined as a
-variable directly in the `run/1` callback, or returned by a function, etc. It's
-a simple raw value. In this example we define it as a module attribute so we can
-print the usage for `mix help`.
+## Building CLI Applications in Elixir
 
-```elixir
-    @command name: "mix example",
-             module: __MODULE__,
-             options: [
-               verbose: [
-                 short: :v,
-                 type: :boolean,
-                 default: false,
-                 doc: "Output debug info about the command."
-               ]
-             ],
-             arguments: [
-               n: [type: :integer, doc: "The value to convert."],
-               base: [
-                 cast: &__MODULE__.cast_base/1,
-                 doc: "An numeric base. Accepts 'two' or 'eigh' only!"
-               ]
-             ]
-```
+Note that due to the startup time of the BEAM, it is sometimes discouraged to
+build command line applications with Elixir.
 
-We gave `"mix example"` as the name because this is how it is supposed to be
-invoked. This will be displayed in the help and usage generated text. If you are
-building an escript this should be the name of your executable instead.
+While the startup problem is real, this is only important for small utilities
+like `ls`, `grep` or `cat`. You surely do not want that delay when piping or
+looping with those commands in bash scripts.
 
-
-### Parse the command arguments
-
-Implementations should use the `CliMate.CLI.parse_or_halt!/2` function
-to automatically convert the command `argv` or display an error.
-
-```elixir
-  @impl true
-  def run(argv) do
-    %{options: opts, arguments: args} = CLI.parse_or_halt!(argv, @command)
-
-    formatted = Integer.to_string(args.n, args.base)
-
-    if opts.verbose do
-      IO.puts("#{args.n} in base #{args.base} is #{formatted}")
-    else
-      IO.puts(formatted)
-    end
-  end
-
-  def cast_base("two"), do: {:ok, 2}
-  def cast_base("eight"), do: {:ok, 8}
-  def cast_base(_), do: {:error, :invalid_base}
-```
-
-The `CLI.parse_or_halt!/2` function will return a map with the `:options` and
-`:arguments` as maps. The values in those maps are casted according to the
-`:type` of an option and the `:type` and/or `:cast` of an argument.
-
-The function will also stop if one of those casting functions fails.
-
-Finally, this function will also halt the VM normally if the `--help` option is
-provided. This option is built in and does not need to be defined.
-
-### Display the usage block
-
-All commands in CliMate support a `--help` option by default. This is useful
-when Mix is not available (for example in escripts). In this example we can
-still call that with mix:
-
-```
-%> mix example --help
-mix example version 0.7.1
-
-Synopsis
-
-  mix example [options] <n> <base>
-
-Arguments
-
-  n
-  The value to convert.
-
-  base
-  An numeric base. Accepts 'two' or 'eigh' only!
-
-Options
-
-  -v, --verbose
-        Output debug info about the command. Defaults to false.
-
-      --help
-        Displays this help.
-  ```
-
-### Provide options and arguments docs for `mix help`
-
-It is also possible to provide arguments and options descriptions for `mix help
-my.command`:
-
-```elixir
-  @shortdoc "Formats an integer in base two or eight"
-
-  @moduledoc """
-  #{@shortdoc}
-
-  #{CliMate.CLI.format_usage(@command, format: :moduledoc)}
-  """
-```
-
-This will output something like that (with colored output):
-
-```
-%> mix help example
-                              mix example
-
-Formats an integer in base two or eight
-
-## Synopsis
-
-    mix example [options] <n> <base>
-
-## Arguments
-
-  • n- The value to convert.
-  • base- An numeric base. Accepts 'two' or 'eigh' only!
-
-## Options
-
-  • -v, --verbose- Output debug info about the command. Defaults to
-    false.
-  • --help- Displays this help.
-```
+But for commands that are doing more, like deployments or asset bundling, or
+tools that run for a while like credo or dialyzer it is totally fine. And you
+get to write them with Elixir!
 
 ## Migration to version 0.8.0
 
@@ -200,8 +97,7 @@ If your library was intended to be installed like this:
     mix archive.install hex your_library
 
 This would not work when using CliMate because it would not embed the CLI code
-in your code directly on compilation. This was dropped because maintenance of a
-full library wrapped in a `quote do` block was not perennial.
+in your code directly on compilation. This was dropped because maintenance of a full library wrapped in a `quote do` block was not perennial.
 
 Since version 0.8.0, the `mix cli.embed` task will generate the CLI code
 directly into your library:
@@ -230,7 +126,7 @@ mix projects (by loading `mix.exs` and projects code).
 
 For regular applications that were using CliMate with either `use CliMate` or
 `CliMate.extend_cli()`, there is a single change to perform, that is replacing
-that line with :
+that line with:
 
 ```elixir
 require CliMate.CLI
@@ -253,23 +149,12 @@ The best way to provide commands with dependencies is to provide an
 like [burrito](https://github.com/burrito-elixir/burrito).
 
 
-## Building CLI applications in Elixir
-
-Note that due to the startup time of the BEAM, it is sometimes discouraged to
-build command line applications with Elixir.
-
-While the startup problem is real, this is only important for small utilities
-like `ls`, `grep` or `cat`. You surely do not want that delay when piping or
-looping with those commands in bash scripts.
-
-But for commands that are doing more, like deployments or asset bundling, or
-tools that run for a while like credo or dialyzer it is totally fine. And you
-get to write them with Elixir!
-
 ## Roadmap
 
-We would like to support the following features in future releases:
+* Merging code from Argument and Option for consistent capabilities
+* Support for subcommands in escripts
 
-* [ ] Merge code from Argument and Option to provide same capabilities of native
-  and custom type casting.
-* [ ] Support subcommands for escripts.
+
+## License
+
+CliMate is released under the MIT License. See the [LICENSE](LICENSE.md) file for details.

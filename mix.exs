@@ -51,15 +51,19 @@ defmodule CliMate.MixProject do
     [
       extras: [
         "LICENSE.md": [title: "License"],
-        "README.md": [title: "Overview"]
+        "README.md": [title: "Overview"],
+        "guides/getting_started.md": [title: "Getting Started"],
       ],
       main: "readme",
       source_url: @source_url,
       source_ref: "v#{@version}",
       formatters: ["html"],
-      groups_for_docs: [
+      groups_for_modules: [
         Parsing: &(&1[:section] == :parser),
         "Shell & IO": &(&1[:section] == :io)
+      ],
+      groups_for_extras: [
+        Guides: ~r{guides/.*}
       ]
     ]
   end

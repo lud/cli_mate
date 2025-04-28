@@ -2,7 +2,10 @@ defmodule Mix.Tasks.Cli.Embed do
   alias CliMate.CLI
   use Mix.Task
 
+  @shortdoc "Copies the CLI code into your own application."
+
   @command module: __MODULE__,
+           doc: @shortdoc,
            options: [
              extend: [
                type: :boolean,
@@ -18,7 +21,7 @@ defmodule Mix.Tasks.Cli.Embed do
                """
              ],
              moduledoc: [
-               type: :boolean,
+               type: :string,
                default: true,
                doc: """
                When true, include @moduledoc attributes in the generated code.
@@ -58,8 +61,6 @@ defmodule Mix.Tasks.Cli.Embed do
                """
              ]
            ]
-
-  @shortdoc "Copy the CLI code into your own application"
 
   @moduledoc """
   #{@shortdoc}

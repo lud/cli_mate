@@ -66,8 +66,7 @@ defmodule CliMate.CLI do
   end
 
   @doc """
-  Outputs `iodata` in the current shell, wrapped with formatting
-  information, such as `[color, iodata, :default_color]`.
+  Wraps the given `iodata` with the given `color`.
 
   `color` should be a `IO.ANSI.format/2` compatible atom.
   """
@@ -124,6 +123,14 @@ defmodule CliMate.CLI do
   """
   @doc section: :io
   def writeln(iodata) do
+    shell()._print(:stdio, :info, iodata)
+  end
+
+  @doc """
+  Outputs `iodata` in the current shell.
+  """
+  @doc section: :io
+  def write(iodata) do
     shell()._print(:stdio, :info, iodata)
   end
 
@@ -313,7 +320,7 @@ defmodule CliMate.CLI do
   def parse_or_halt!(argv, command) do
     case parse(argv, command) do
       {:ok, %{options: %{help: true}}} ->
-        writeln(format_usage(command, ansi_enabled: IO.ANSI.enabled?()))
+        write(format_usage(command, ansi_enabled: IO.ANSI.enabled?()))
         halt(0)
         :halt
 
@@ -321,7 +328,7 @@ defmodule CliMate.CLI do
         parsed
 
       {:error, reason} ->
-        writeln(format_usage(command, ansi_enabled: IO.ANSI.enabled?()))
+        write(format_usage(command, ansi_enabled: IO.ANSI.enabled?()))
         error(format_reason(reason))
         halt(1)
         :halt

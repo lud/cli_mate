@@ -62,7 +62,7 @@ defmodule CliMate.CLI.Argument do
           key: atom,
           required: boolean,
           type: vtype,
-          doc: binary,
+          doc: binary | nil,
           cast: nil | (term -> {:ok, term} | {:error, term}) | {module, atom, [term]}
         }
 
@@ -70,7 +70,7 @@ defmodule CliMate.CLI.Argument do
     required = Keyword.get(conf, :required, true)
     cast = Keyword.get(conf, :cast, nil)
 
-    doc = Keyword.get(conf, :doc, "")
+    doc = Keyword.get(conf, :doc) || ""
     type = Keyword.get(conf, :type, :string)
 
     validate_type(type)

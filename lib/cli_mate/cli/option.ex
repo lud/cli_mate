@@ -100,7 +100,7 @@ defmodule CliMate.CLI.Option do
   def new(key, conf) when is_atom(key) and is_list(conf) do
     keep = Keyword.get(conf, :keep, false)
     type = Keyword.get(conf, :type, :string)
-    doc = Keyword.get(conf, :doc, "")
+    doc = Keyword.get(conf, :doc) || ""
     short = Keyword.get(conf, :short, nil)
     doc_arg = Keyword.get_lazy(conf, :doc_arg, fn -> default_doc_arg(type) end)
     default_doc = Keyword.get(conf, :default_doc, nil)

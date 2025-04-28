@@ -19,9 +19,9 @@ This library provides:
 - [Installation](#installation)
 - [Basic usage](#basic-usage)
   - [Describe a command](#describe-a-command)
-  - [Provide options and arguments docs for `mix help`](#provide-options-and-arguments-docs-for-mix-help)
   - [Parse the command arguments](#parse-the-command-arguments)
   - [Display the usage block](#display-the-usage-block)
+  - [Provide options and arguments docs for `mix help`](#provide-options-and-arguments-docs-for-mix-help)
 - [Migration to version 0.8.0](#migration-to-version-080)
 - [Migration to version 0.7.0](#migration-to-version-070)
 - [Building CLI applications in Elixir](#building-cli-applications-in-elixir)
@@ -33,14 +33,14 @@ This library provides:
 ```elixir
 def deps do
   [
-    {:cli_mate, "~> 0.7",runtime: false},
+    {:cli_mate, "~> 0.7", runtime: false},
   ]
 end
 ```
 
 ## Basic usage
 
-To illustrate how that library work we will implement an example Mix task that
+To illustrate how this library works we will implement an example Mix task that
 prints an integer in base 2 or 8.
 
 
@@ -58,69 +58,40 @@ end
 
 ### Describe a command
 
-Then we define a command in your module. That command can be defined as a
+Then we define a command in our module. That command can be defined as a
 variable directly in the `run/1` callback, or returned by a function, etc. It's
 a simple raw value. In this example we define it as a module attribute so we can
 print the usage for `mix help`.
 
 ```elixir
-  @command name: "mix example",
-           options: [
-             verbose: [
-               short: :v,
-               type: :boolean,
-               default: false,
-               doc: "Output debug info about the command."
+    @command name: "mix example",
+             module: __MODULE__,
+             options: [
+               verbose: [
+                 short: :v,
+                 type: :boolean,
+                 default: false,
+                 doc: "Output debug info about the command."
+               ]
+             ],
+             arguments: [
+               n: [type: :integer, doc: "The value to convert."],
+               base: [
+                 cast: &__MODULE__.cast_base/1,
+                 doc: "An numeric base. Accepts 'two' or 'eigh' only!"
+               ]
              ]
-           ],
-           arguments: [
-             n: [type: :integer],
-             base: [cast: &__MODULE__.cast_base/1]
-           ]
 ```
 
 We gave `"mix example"` as the name because this is how it is supposed to be
-invoked. This we be displayed in the help and usage generated text. If you are
+invoked. This will be displayed in the help and usage generated text. If you are
 building an escript this should be the name of your executable instead.
 
-We can now declare the documentation for the module:
-
-### Provide options and arguments docs for `mix help`
-
-```elixir
-  @shortdoc "Formats an integer in base two or eight"
-
-  @moduledoc """
-  #{@shortdoc}
-
-  #{CliMate.CLI.format_usage(@command, format: :moduledoc)}
-  """
-```
-
-This will output something like that (but with colors):
-
-```
-%> mix help example
-
-                                  mix example
-
-Formats an integer in base two or eight
-
-## Usage
-
-    mix example [options] <n> <base>
-
-## Options
-
-  • -v, --verbose - Output debug info about the command. Defaults to false.
-  • --help - Displays this help.
-
-Location: _build/dev/lib/cli_mate/ebin
-```
 
 ### Parse the command arguments
 
-And finally our implementation!
+Implementations should use the `CliMate.CLI.parse_or_halt!/2` function
+to automatically convert the command `argv` or display an error.
 
 ```elixir
   @impl true
@@ -153,19 +124,72 @@ provided. This option is built in and does not need to be defined.
 ### Display the usage block
 
 All commands in CliMate support a `--help` option by default. This is useful
-when Mix is not available. In this example we can still call that with mix:
+when Mix is not available (for example in escripts). In this example we can
+still call that with mix:
 
 ```
 %> mix example --help
-Usage
+mix example version 0.7.1
+
+Synopsis
 
   mix example [options] <n> <base>
 
+Arguments
+
+  n
+  The value to convert.
+
+  base
+  An numeric base. Accepts 'two' or 'eigh' only!
+
 Options
 
-  -v, --verbose   Output debug info about the command. Defaults to false.
-      --help      Displays this help.
+  -v, --verbose
+        Output debug info about the command. Defaults to false.
+
+      --help
+        Displays this help.
   ```
+
+### Provide options and arguments docs for `mix help`
+
+It is also possible to provide arguments and options descriptions for `mix help
+my.command`:
+
+```elixir
+  @shortdoc "Formats an integer in base two or eight"
+
+  @moduledoc """
+  #{@shortdoc}
+
+  #{CliMate.CLI.format_usage(@command, format: :moduledoc)}
+  """
+```
+
+This will output something like that (with colored output):
+
+```
+%> mix help example
+                              mix example
+
+Formats an integer in base two or eight
+
+## Synopsis
+
+    mix example [options] <n> <base>
+
+## Arguments
+
+  • n- The value to convert.
+  • base- An numeric base. Accepts 'two' or 'eigh' only!
+
+## Options
+
+  • -v, --verbose- Output debug info about the command. Defaults to
+    false.
+  • --help- Displays this help.
+```
 
 ## Migration to version 0.8.0
 
@@ -182,7 +206,7 @@ full library wrapped in a `quote do` block was not perennial.
 Since version 0.8.0, the `mix cli.embed` task will generate the CLI code
 directly into your library:
 
-    mix cli.embled MyApp.CLI lib/my_app/cli
+    mix cli.embed MyApp.CLI lib/my_app/cli
 
 Make sure to read the different options by calling `mix help cli.embed`.
 
@@ -215,13 +239,13 @@ CliMate.CLI.extend()
 
 ## Migration to version 0.7.0
 
-The orginal version of CliMate included the CLI code in a consumer module, using
-`use CliMate`. This allowed library authors to use CliMate in mix tasks that
-could be installed by users with `mix archive.install hex some_package`.
+The original version of CliMate included the CLI code in a consumer module,
+using `use CliMate`. This allowed library authors to use CliMate in mix tasks
+that could be installed by users with `mix archive.install hex some_package`.
 Archives installed that way cannot have dependencies so CliMate was providing a
 way to use it anyway.
 
-But this solution had too much problems regarding code loading with the recent
+But this solution had too many problems regarding code loading with the recent
 versions of Elixir. So we are stopping support for this feature.
 
 The best way to provide commands with dependencies is to provide an
@@ -231,7 +255,7 @@ like [burrito](https://github.com/burrito-elixir/burrito).
 
 ## Building CLI applications in Elixir
 
-Note that due to the startup time of the BEAM, is is sometimes discouraged to
+Note that due to the startup time of the BEAM, it is sometimes discouraged to
 build command line applications with Elixir.
 
 While the startup problem is real, this is only important for small utilities
@@ -244,7 +268,7 @@ get to write them with Elixir!
 
 ## Roadmap
 
-We would like to support the following in future releases:
+We would like to support the following features in future releases:
 
 * [ ] Merge code from Argument and Option to provide same capabilities of native
   and custom type casting.

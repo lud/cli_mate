@@ -1,4 +1,5 @@
 defmodule CliMate.CLI.UsageFormat.OptionFormatter.PlainText do
+  alias CliMate.CLI.Argument
   alias CliMate.CLI.Option
 
   @moduledoc false
@@ -7,17 +8,22 @@ defmodule CliMate.CLI.UsageFormat.OptionFormatter.PlainText do
 
   # padding on the left of the options block
   @left_padding "  "
-
-  # padding between an option signature and its docs
-  @inner_padding "   "
-
-  @inner_padding_len String.length(@inner_padding)
   @left_padding_len String.length(@left_padding)
+
+  defp left_padding, do: @left_padding
+
+  @impl true
+  def format_head(title, docs, fmt_opts) do
+    case docs do
+      nil -> format_heading(title, fmt_opts)
+      _ -> format_section(title, docs, fmt_opts)
+    end
+  end
 
   @impl true
   def format_synopsis(iodata, fmt_opts) do
     if Keyword.get(fmt_opts, :ansi_enabled, false) do
-      ["  ", IO.ANSI.cyan(), iodata, IO.ANSI.reset()]
+      ["  ", cyan(iodata)]
     else
       ["  ", iodata]
     end
@@ -25,15 +31,40 @@ defmodule CliMate.CLI.UsageFormat.OptionFormatter.PlainText do
 
   @impl true
   def format_section(title, content, fmt_opts) do
+    [format_heading(title, fmt_opts), "\n\n", content]
+  end
+
+  defp format_heading(title, fmt_opts) do
     if Keyword.get(fmt_opts, :ansi_enabled, false) do
-      [bright(title), "\n\n", content]
+      bright(title)
     else
-      [title, "\n\n", content]
+      title
     end
   end
 
   @impl true
-  def section_padding, do: "\n\n"
+  def section_margin, do: "\n\n"
+
+  @impl true
+  def format_arguments(command, fmt_opts) do
+    columns = Keyword.get_lazy(fmt_opts, :io_columns, &io_columns/0)
+    ansi_enabled? = Keyword.get(fmt_opts, :ansi_enabled, false)
+    doc_width = columns - @left_padding_len
+    doc_padding = [?\n, left_padding()]
+
+    Enum.map_intersperse(command.arguments, "\n\n", fn arg ->
+      title = arg_title(arg, ansi_enabled?)
+
+      case format_doc(arg, doc_width, doc_padding) do
+        :no_doc -> [left_padding(), title]
+        doc -> [left_padding(), title, doc]
+      end
+    end)
+  end
+
+  defp arg_title(arg, ansi_enabled?) do
+    if ansi_enabled?, do: bright(Atom.to_string(arg.key)), else: Atom.to_string(arg.key)
+  end
 
   @impl true
   def format_options(command, fmt_opts) do
@@ -43,76 +74,97 @@ defmodule CliMate.CLI.UsageFormat.OptionFormatter.PlainText do
     options = command.options
     has_short_opts? = Enum.any?(options, fn {_, %{short: short}} -> short != nil end)
 
-    signatures_w_len = Enum.map(options, &signature(&1, ansi_enabled?, has_short_opts?))
+    signatures = Enum.map(options, &signature(&1, ansi_enabled?, has_short_opts?))
 
-    max_signature_len = Enum.reduce(signatures_w_len, 0, fn {_, len}, acc -> max(acc, len) end)
+    {doc_padding, doc_padding_len} =
+      if has_short_opts? do
+        # ..................... "-x, --"
+        {[?\n, left_padding(), "      "], @left_padding_len + 6}
+      else
+        # ..................... "--"
+        {[?\n, left_padding(), "  "], @left_padding_len + 2}
+      end
 
-    signatures_w_pad =
-      Enum.map(signatures_w_len, fn {text, len} ->
-        case max_signature_len - len do
-          0 -> {text, ""}
-          rem -> {text, List.duplicate(" ", rem)}
-        end
-      end)
-
-    doc_padding_len = @left_padding_len + max_signature_len + @inner_padding_len
-    doc_padding = ["\n", List.duplicate(" ", doc_padding_len)]
     doc_width = columns - doc_padding_len
 
     docs = Enum.map(options, &format_doc(&1, doc_width, doc_padding))
 
-    Enum.zip_with(signatures_w_pad, docs, fn
-      {signature, _sign_pad}, :no_doc ->
-        [@left_padding, signature, "\n"]
+    opts_docs =
+      Enum.zip_with(signatures, docs, fn
+        signature, :no_doc ->
+          [left_padding(), signature, ?\n]
 
-      {signature, sign_pad}, doc ->
-        [@left_padding, signature, sign_pad, @inner_padding, doc, "\n"]
-    end)
+        signature, doc ->
+          [left_padding(), signature, doc, ?\n]
+      end)
+
+    Enum.intersperse(opts_docs, ?\n)
   end
 
-  defp signature({_, option}, ansi_enabled?, true = _shorts?) do
+  defp signature({_, option}, ansi_enabled?, shorts?) do
+    iodata_short = short_signature(option, ansi_enabled?, shorts?)
+    iodata_long = long_signature(option, ansi_enabled?)
+    [iodata_short, iodata_long]
+  end
+
+  defp short_signature(option, ansi_enabled?, shorts?) do
     %Option{short: short} = option
 
-    {iodata, len} =
+    if shorts? do
       case short do
-        nil -> {["    "], 4}
-        s when ansi_enabled? -> {[bright(["-", Atom.to_string(s)]), ", "], 4}
-        s -> {["-", Atom.to_string(s), ", "], 4}
+        nil -> ["    "]
+        s when ansi_enabled? -> [bright(["-", Atom.to_string(s)]), ", "]
+        s -> ["-", Atom.to_string(s), ", "]
       end
-
-    signature_2(option, iodata, len, ansi_enabled?)
-  end
-
-  defp signature({_, option}, ansi_enabled?, false = _shorts?) do
-    signature_2(option, "", 0, ansi_enabled?)
-  end
-
-  defp signature_2(option, iodata, len, ansi_enabled?) do
-    %Option{type: type} = option
-
-    name = name(option)
-    name_len = String.length(name)
-
-    case type do
-      t when t in [:boolean, :count] and ansi_enabled? ->
-        {[iodata, bright(["--", name])], len + 2 + name_len}
-
-      t when t in [:boolean, :count] ->
-        {[iodata, "--", name], len + 2 + name_len}
-
-      _ when ansi_enabled? ->
-        doc_arg = option.doc_arg
-        doc_arg_len = String.length(doc_arg)
-        {[iodata, bright(["--", name, " <", doc_arg, ">"])], len + 2 + name_len + doc_arg_len + 3}
-
-      _ ->
-        doc_arg = option.doc_arg
-        doc_arg_len = String.length(doc_arg)
-        {[iodata, "--", name, " <", doc_arg, ">"], len + 2 + name_len + doc_arg_len + 3}
+    else
+      []
     end
   end
 
-  defp format_doc({_, option}, width, pad_text) do
+  defp long_signature(option, ansi_enabled?) do
+    %Option{type: type} = option
+    name = name(option)
+
+    signature =
+      case type do
+        t when t in [:boolean, :count] and ansi_enabled? ->
+          [bright(["--", name])]
+
+        t when t in [:boolean, :count] ->
+          ["--", name]
+
+        _ when ansi_enabled? ->
+          doc_arg = option.doc_arg
+          [bright(["--", name]), cyan([" <", doc_arg, ">"])]
+
+        _ ->
+          doc_arg = option.doc_arg
+          ["--", name, " <", doc_arg, ">"]
+      end
+
+    if type == :count || option.keep do
+      [signature, " (repeatable)"]
+    else
+      signature
+    end
+  end
+
+  defp format_doc(%Argument{} = argument, width, pad_text) do
+    %{doc: doc} = argument
+
+    case doc do
+      "" ->
+        :no_doc
+
+      _ ->
+        doc
+        |> unwrap_doc()
+        |> wrap_doc(width)
+        |> Enum.map(&[pad_text, &1])
+    end
+  end
+
+  defp format_doc({_, %Option{} = option}, width, pad_text) do
     %Option{
       key: k,
       doc: doc,
@@ -135,7 +187,7 @@ defmodule CliMate.CLI.UsageFormat.OptionFormatter.PlainText do
         doc
         |> unwrap_doc()
         |> wrap_doc(width)
-        |> Enum.intersperse(pad_text)
+        |> Enum.map(&[pad_text, &1])
     end
   end
 
@@ -151,10 +203,12 @@ defmodule CliMate.CLI.UsageFormat.OptionFormatter.PlainText do
   end
 
   defp bright(iodata), do: [IO.ANSI.bright(), iodata, IO.ANSI.reset()]
+  defp cyan(iodata), do: [IO.ANSI.cyan(), iodata, IO.ANSI.reset()]
 
   defp unwrap_doc(doc) do
     doc
     |> IO.chardata_to_string()
+    |> String.trim()
     |> String.replace("\n", " ")
     |> String.replace(~r/\s+/, " ")
   end

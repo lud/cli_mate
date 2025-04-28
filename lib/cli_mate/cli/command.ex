@@ -5,13 +5,15 @@ defmodule CliMate.CLI.Command do
   @moduledoc false
 
   @enforce_keys [:arguments, :options]
-  defstruct [:arguments, :options, :module, :name]
+  defstruct [:arguments, :options, :module, :name, :version, :doc]
 
   @type t :: %__MODULE__{
           arguments: [Argument.t()],
           options: [{atom, Option.t()}],
           module: module | nil,
-          name: binary | nil
+          name: binary | nil,
+          version: binary | nil,
+          doc: binary | nil
         }
 
   @help_option_def [type: :boolean, default: false, doc: "Displays this help."]
@@ -24,9 +26,15 @@ defmodule CliMate.CLI.Command do
       |> Enum.map(&build_option/1)
 
     arguments = conf |> Keyword.get(:arguments, []) |> build_args()
-    name = conf |> Keyword.get(:name, nil)
-    module = conf |> Keyword.get(:module, nil)
-    %__MODULE__{options: options, arguments: arguments, name: name, module: module}
+
+    %__MODULE__{
+      options: options,
+      arguments: arguments,
+      name: Keyword.get(conf, :name, nil),
+      module: Keyword.get(conf, :module, nil),
+      version: Keyword.get(conf, :version, nil),
+      doc: Keyword.get(conf, :doc, nil)
+    }
   end
 
   defp add_help(options) do

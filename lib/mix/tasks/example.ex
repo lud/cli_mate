@@ -14,8 +14,11 @@ if Mix.env() != :prod do
                ]
              ],
              arguments: [
-               n: [type: :integer],
-               base: [cast: &__MODULE__.cast_base/1]
+               n: [type: :integer, doc: "The value to convert."],
+               base: [
+                 cast: &__MODULE__.cast_base/1,
+                 doc: "An numeric base. Accepts 'two' or 'eigh' only!"
+               ]
              ]
 
     @shortdoc "Formats an integer in base two or eight"

@@ -1,4 +1,5 @@
 defmodule CliMate.CLI.UsageFormat.OptionFormatter.Markdown do
+  alias CliMate.CLI.Argument
   alias CliMate.CLI.Option
 
   @moduledoc false
@@ -6,22 +7,45 @@ defmodule CliMate.CLI.UsageFormat.OptionFormatter.Markdown do
   @behaviour CliMate.CLI.UsageFormat
 
   @impl true
-  def format_synopsis(iodata, _), do: ["    ", iodata]
+  def format_head(_, _, _), do: nil
+
+  @impl true
+  def format_synopsis(iodata, _), do: ["    ", iodata, "\n"]
 
   @impl true
   def format_section(title, content, _), do: ["## ", title, "\n\n", content]
 
   @impl true
-  def section_padding, do: "\n\n"
+  def section_margin, do: "\n\n"
+
+  @impl true
+  def format_arguments(command, _fmt_opts) do
+    Enum.map(command.arguments, &format_argument/1)
+  end
+
+  defp format_argument(argument) do
+    %Argument{
+      key: key,
+      doc: doc
+    } = argument
+
+    doc =
+      case doc do
+        "" -> ""
+        text -> [" - ", indent_lines_except_first(text, 2)]
+      end
+
+    ["* ", ["`", Atom.to_string(key), "`"], String.trim(IO.chardata_to_string(doc)), "\n"]
+  end
 
   @impl true
   def format_options(command, _fmt_opts) do
     Enum.map(command.options, &format_option/1)
   end
 
-  def format_option({_, option}) do
+  defp format_option({_, option}) do
     %Option{
-      key: k,
+      key: key,
       doc: doc,
       default: default,
       default_doc: default_doc
@@ -34,11 +58,13 @@ defmodule CliMate.CLI.UsageFormat.OptionFormatter.Markdown do
         text -> [" - ", indent_lines_except_first(text, 2)]
       end
 
+    doc = String.trim(IO.chardata_to_string(doc))
+
     doc =
-      case {k, default} do
+      case {key, default} do
         {:help, _} -> doc
         {_, :skip} -> doc
-        {_, {:default, v}} -> [doc, [" ", option_doc(k, v, default_doc)]]
+        {_, {:default, v}} -> [doc, [" ", option_doc(key, v, default_doc)]]
       end
 
     ["* ", short_long(option), doc, "\n"]

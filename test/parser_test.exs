@@ -114,14 +114,14 @@ defmodule CliMate.CLI.ParserTest do
     test "will halt(0) with parse_or_halt!" do
       assert :halt = CLI.parse_or_halt!(~w(--help), [])
       {_, _, text} = assert_receive {:cli_mate_shell, :info, _text}
-      assert text =~ "Usage"
+      assert text =~ "Synopsis"
       assert_receive {:cli_mate_shell, :halt, 0}
     end
 
     test "ignore parsing of arguments" do
       assert :halt = CLI.parse_or_halt!(~w(--help), arguments: [some_arg: []])
       {_, _, text} = assert_receive {:cli_mate_shell, :info, _text}
-      assert text =~ "Usage"
+      assert text =~ "Synopsis"
       assert_receive {:cli_mate_shell, :halt, 0}
     end
 

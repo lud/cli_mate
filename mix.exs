@@ -52,7 +52,7 @@ defmodule CliMate.MixProject do
       extras: [
         "LICENSE.md": [title: "License"],
         "README.md": [title: "Overview"],
-        "guides/getting_started.md": [title: "Getting Started"],
+        "guides/getting_started.md": [title: "Getting Started"]
       ],
       main: "readme",
       source_url: @source_url,

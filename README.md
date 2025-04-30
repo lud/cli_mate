@@ -2,12 +2,33 @@
 
 A lightweight, flexible Command-Line-Interface toolkit for Elixir applications.
 
+
 ## Features
 
 * Command line options and arguments parser that extends [OptionParser](https://hexdocs.pm/elixir/OptionParser.html)
 * Shell helpers for formatted output in releases where `Mix` is unavailable
 * Automatic usage formatting for `--help` and `mix help` commands
 * Support for custom type casting and validation
+
+
+## Documentation
+
+Detailed documentation is available on [HexDocs](https://hexdocs.pm/cli_mate):
+
+* [Getting Started](https://hexdocs.pm/cli_mate/getting_started.html) - Getting started with CliMate
+
+
+## Table of Contents
+
+- [Features](#features)
+- [Documentation](#documentation)
+- [Table of Contents](#table-of-contents)
+- [Installation](#installation)
+- [Quick Example](#quick-example)
+- [Building CLI Applications in Elixir](#building-cli-applications-in-elixir)
+- [Migrating from older versions](#migrating-from-older-versions)
+- [Roadmap](#roadmap)
+- [License](#license)
 
 
 ## Installation
@@ -19,25 +40,6 @@ def deps do
   ]
 end
 ```
-
-## Documentation
-
-Detailed documentation is available on [HexDocs](https://hexdocs.pm/cli_mate):
-
-* [Getting Started](https://hexdocs.pm/cli_mate/getting_started.html) - Getting started with CliMate
-
-## Table of Contents
-
-- [Features](#features)
-- [Installation](#installation)
-- [Documentation](#documentation)
-- [Table of Contents](#table-of-contents)
-- [Quick Example](#quick-example)
-- [Building CLI Applications in Elixir](#building-cli-applications-in-elixir)
-- [Migration to version 0.8.0](#migration-to-version-080)
-- [Migration to version 0.7.0](#migration-to-version-070)
-- [Roadmap](#roadmap)
-- [License](#license)
 
 
 ## Quick Example
@@ -88,7 +90,9 @@ But for commands that are doing more, like deployments or asset bundling, or
 tools that run for a while like credo or dialyzer it is totally fine. And you
 get to write them with Elixir!
 
-## Migration to version 0.8.0
+## Migrating from older versions
+
+### Migration to version 0.8.0
 
 Support for installable mix tasks is back, but now relies on code generation.
 
@@ -133,7 +137,7 @@ require CliMate.CLI
 CliMate.CLI.extend()
 ```
 
-## Migration to version 0.7.0
+### Migration to version 0.7.0
 
 The original version of CliMate included the CLI code in a consumer module,
 using `use CliMate`. This allowed library authors to use CliMate in mix tasks

@@ -21,7 +21,7 @@ defmodule Mix.Tasks.Cli.Embed do
                """
              ],
              moduledoc: [
-               type: :string,
+               type: :boolean,
                default: true,
                doc: """
                When true, include @moduledoc attributes in the generated code.

@@ -198,13 +198,13 @@ defmodule CliMate.CLI do
   ### Defining options
 
   Options definitions is a `Keyword` whose keys are the option name, and values
-  are the options parameters. Note that keys with underscores like `some_thing`
-  define options in kebab case like `--some-thing`.
+  are the options parameters. Keys with underscores like `some_thing` define
+  options in kebab case like `--some-thing`.
 
   The available settings for an option are described in the
   `#{inspect(__MODULE__)}.Option` module.
 
-  Note that the `:help` option is always defined and cannot be overridden.
+  The `:help` option is always defined and cannot be overridden.
 
   ### Options examples
 

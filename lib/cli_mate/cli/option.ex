@@ -67,8 +67,8 @@ defmodule CliMate.CLI.Option do
         defp default_opt(:port), do: 4000
         defp default_opt(:scheme), do: "http"
 
-  Note that when the command is defined in a module attribute, you need to pass
-  the module prefix or the compilation will fail:
+  When the command is defined in a module attribute, you need to pass the module
+  prefix or the compilation will fail:
 
       defmodule MyCommand do
         use Mix.Task

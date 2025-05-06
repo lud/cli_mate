@@ -79,8 +79,8 @@ end
 
 ## Building CLI Applications in Elixir
 
-Note that due to the startup time of the BEAM, it is sometimes discouraged to
-build command line applications with Elixir.
+Due to the startup time of the BEAM, it is generally discouraged to build
+command line applications with Elixir.
 
 While the startup problem is real, this is only important for small utilities
 like `ls`, `grep` or `cat`. You surely do not want that delay when piping or

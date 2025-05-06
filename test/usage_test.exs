@@ -231,26 +231,26 @@ defmodule CliMate.CLI.UsageTest do
 
     ## Arguments
 
-    * `name`- The name of the thing.
+    * `name` - The name of the thing.
     * `other`
-    * `another`- Another argument
+    * `another` - Another argument
 
 
     ## Options
 
-    * `-l, --lang <string>`- pick a language
-    * `--otp-vsn <integer>`- The OTP version.
+    * `-l, --lang <string>` - pick a language
+    * `--otp-vsn <integer>` - The OTP version.
     * `--with-name <some-name>`
-    * `--with-name-bool`- The doc_arg is not used
-    * `--diatribe <string>`- This is a very long documentation line and it should be wrapped on multiple lines if the terminal is short.
-    * `--with-count-type`- I count.
-    * `--with-default <string>`- Some stuff. Defaults to `"nothing"`.
+    * `--with-name-bool` - The doc_arg is not used
+    * `--diatribe <string>` - This is a very long documentation line and it should be wrapped on multiple lines if the terminal is short.
+    * `--with-count-type` - I count.
+    * `--with-default <string>` - Some stuff. Defaults to `"nothing"`.
     * `--bool-with-default` Defaults to `true`.
     * `--bool-bare`
-    * `--with-default-fun <string>`- Some fun Function in test.
-    * `--with-default-capture <string>`- Some fun Function capture in test.
+    * `--with-default-fun <string>` - Some fun Function in test.
+    * `--with-default-capture <string>` - Some fun Function capture in test.
     * `--with-nil-default <string>` Defaults to `nil`.
-    * `--help`- Displays this help.
+    * `--help` - Displays this help.
     """
 
     assert expected === IO.chardata_to_string(usage)

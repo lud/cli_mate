@@ -219,7 +219,8 @@ defmodule CliMate.CLI.UsageFormat.OptionFormatter.PlainText do
       |> String.split(" ")
       |> Enum.map(&{&1, String.length(&1)})
 
-    Enum.reduce(words, {0, [], []}, fn {word, len}, {line_len, this_line, lines} ->
+    words
+    |> Enum.reduce({0, [], []}, fn {word, len}, {line_len, this_line, lines} ->
       cond do
         line_len == 0 -> {len, [word | this_line], lines}
         line_len + 1 + len > width -> {len, [word], [:lists.reverse(this_line) | lines]}

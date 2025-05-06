@@ -24,6 +24,7 @@
         included: [
           "lib/",
           "src/",
+          "dev/",
           "test/",
           "web/",
           "apps/*/lib/",
@@ -82,14 +83,13 @@
           # You can customize the priority of any check
           # Priority values are: `low, normal, high, higher`
           #
-          {Credo.Check.Design.AliasUsage,
-           [priority: :low, if_nested_deeper_than: 2, if_called_more_often_than: 0]},
+          {Credo.Check.Design.AliasUsage, [priority: :low, if_nested_deeper_than: 2, if_called_more_often_than: 1]},
           {Credo.Check.Design.TagFIXME, []},
           # You can also customize the exit_status of each check.
           # If you don't want TODO comments to cause `mix credo` to fail, just
           # set this value to 0 (zero).
           #
-          {Credo.Check.Design.TagTODO, [exit_status: 2]},
+          {Credo.Check.Design.TagTODO, [exit_status: 0]},
 
           #
           ## Readability Checks
@@ -99,7 +99,6 @@
           {Credo.Check.Readability.LargeNumbers, []},
           {Credo.Check.Readability.MaxLineLength, [priority: :low, max_length: 120]},
           {Credo.Check.Readability.ModuleAttributeNames, []},
-          {Credo.Check.Readability.ModuleDoc, []},
           {Credo.Check.Readability.ModuleNames, []},
           {Credo.Check.Readability.ParenthesesInCondition, []},
           {Credo.Check.Readability.ParenthesesOnZeroArityDefs, []},
@@ -159,7 +158,13 @@
           {Credo.Check.Warning.UnusedRegexOperation, []},
           {Credo.Check.Warning.UnusedStringOperation, []},
           {Credo.Check.Warning.UnusedTupleOperation, []},
-          {Credo.Check.Warning.WrongTestFileExtension, []}
+          {Credo.Check.Warning.WrongTestFileExtension, []},
+
+          # Doc
+
+          {Credo.Check.Readability.SinglePipe, []},
+          {Credo.Check.Readability.Specs, false},
+          {Credo.Check.Readability.ModuleDoc, []}
         ],
         disabled: [
           #
@@ -183,8 +188,6 @@
           {Credo.Check.Readability.OnePipePerLine, []},
           {Credo.Check.Readability.SeparateAliasRequire, []},
           {Credo.Check.Readability.SingleFunctionToBlockPipe, []},
-          {Credo.Check.Readability.SinglePipe, []},
-          {Credo.Check.Readability.Specs, []},
           {Credo.Check.Readability.StrictModuleLayout, []},
           {Credo.Check.Readability.WithCustomTaggedTuple, []},
           {Credo.Check.Refactor.ABCSize, []},

@@ -3,8 +3,7 @@ defmodule CliMate.CLI.UsageTest do
   use ExUnit.Case, async: true
 
   def no_ansi(iodata) do
-    iodata
-    |> IO.ANSI.format()
+    IO.ANSI.format(iodata)
 
     # |> IO.puts()
 
@@ -89,7 +88,7 @@ defmodule CliMate.CLI.UsageTest do
   test "usage block can be formatted in shell" do
     command = command_test_format()
 
-    usage = CLI.format_usage(command, io_columns: 70) |> no_ansi()
+    usage = no_ansi(CLI.format_usage(command, io_columns: 70))
 
     expected = """
     mix some.command
@@ -158,7 +157,7 @@ defmodule CliMate.CLI.UsageTest do
     options = List.keydelete(Keyword.fetch!(command, :options), :lang, 0)
     command = Keyword.put(command, :options, options)
 
-    usage = CLI.format_usage(command, io_columns: 70) |> no_ansi()
+    usage = no_ansi(CLI.format_usage(command, io_columns: 70))
 
     expected = """
     mix some.command

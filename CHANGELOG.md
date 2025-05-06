@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [unreleased]
+## [0.8.0] - 2025-05-06
 
 ### 🚀 Features
 
@@ -27,6 +27,7 @@ All notable changes to this project will be documented in this file.
 ### ⚙️ Miscellaneous Tasks
 
 - Update Elixir Github workflow (#18)
+- Configure Git Cliff
 
 ## [0.7.1] - 2025-03-24
 

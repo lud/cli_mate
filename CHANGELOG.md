@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.1] - 2025-05-06
+
+### 🐛 Bug Fixes
+
+- Fixed moduledoc spacing and trimming
+
 ## [0.8.0] - 2025-05-06
 
 ### 🚀 Features

@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## [unreleased]
+
+### 🚀 Features
+
+- [**breaking**] Move all CLI modules under the CliMate.CLI namespace
+- Added the cli.embed command to copy the library in another application
+- Display arguments in usage block
+
+### 🐛 Bug Fixes
+
+- Correctly output argument type error
+- Fixed moduledoc option type for cli.embed
+
+### 📚 Documentation
+
+- Describe migration to 0.8 in README.md
+- Moved basic usage to guides
+
+### 🧪 Testing
+
+- Ensure nil defaults are correctly printed in usage
+
+### ⚙️ Miscellaneous Tasks
+
+- Update Elixir Github workflow (#18)
+
 ## [0.7.1] - 2025-03-24
 
 ### 🐛 Bug Fixes
@@ -10,7 +36,6 @@ All notable changes to this project will be documented in this file.
 
 ### ⚙️ Miscellaneous Tasks
 
-- Update Elixir workflow (#17)
 - Cleanup debug output
 
 ## [0.7.0] - 2025-03-24
@@ -36,10 +61,7 @@ All notable changes to this project will be documented in this file.
 - Update CI config (#5)
 - Deprecation message for embeedding
 - Configuration for credo
-- Update Elixir workflow (#9)
-- Update Elixir workflow (#10)
 - Update dependabot config (#12)
-- Update Elixir workflow (#16)
 
 ## [0.6.0] - 2024-11-08
 

@@ -501,6 +501,63 @@ defmodule CliMate.CLI do
   end
 
   @doc """
+  Executes the given fun while keeping the paths for the given app or apps
+  code in the current code path.
+
+  This is useful when running mix tasks that change the code path, for command
+  line applications installed globally with `mix archive.insall`.
+
+  It is not needed for regular mix tasks or escripts.
+  """
+  def with_safe_path(app_or_apps, fun) do
+    # Fetching paths to preserve
+
+    apps = List.wrap(app_or_apps)
+
+    code_paths =
+      apps
+      |> Enum.flat_map(fn app ->
+        case Application.ensure_loaded(app) do
+          :ok ->
+            :ok
+
+          {:error, {~c"no such file" ++ _ = reason, file}} ->
+            raise "cannot load application #{inspect(app)}, #{reason} #{file}"
+
+          {:error, reason} ->
+            raise "cannot load application #{inspect(app)}, #{inspect(reason)}"
+        end
+
+        app
+        |> Application.spec()
+        |> Keyword.fetch!(:modules)
+        |> case do
+          [] ->
+            []
+
+          [module | _] ->
+            {^module, _, beam_path} = :code.get_object_code(module)
+            [:filename.dirname(beam_path)]
+        end
+      end)
+      |> Enum.uniq()
+
+    # Execution of the function
+
+    result = fun.()
+
+    # Resetting the paths
+
+    existing_paths = :code.get_path()
+    paths_to_add = code_paths -- existing_paths
+    Enum.each(paths_to_add, &:code.add_patha(&1, :cache))
+
+    # Result
+
+    result
+  end
+
+  @doc """
   Delegates all `#{inspect(__MODULE__)}` functions from the calling module.
 
   This is useful if you want to define a module where all your CLI helpers

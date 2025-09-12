@@ -56,7 +56,7 @@ defmodule Mix.Tasks.Cli.Embed do
              path: [
                doc: """
                The base directory for the generated modules. When the --extend
-               option is not provided, the base module is definied as <path>.ex,
+               option is not provided, the base module is defined as <path>.ex,
                that is outside of said directory.
                """
              ]

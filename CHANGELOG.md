@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.3] - 2025-09-13
+
+### 🚀 Features
+
+- Simplified output of the plaintext usage block
+
 ## [0.8.2] - 2025-09-12
 
 ### 🚀 Features

@@ -148,7 +148,6 @@ defmodule Mix.Tasks.Cli.Embed do
     # The generated modules are paritally formatted but they are as code blocks.
     # Mix format will finalize the format for acutal files.
     Mix.Task.run("format", written_files)
-
   end
 
   defp handle_source(spec, opts) do

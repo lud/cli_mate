@@ -140,7 +140,7 @@ defmodule CliMate.CLI.ParserTest do
 
     test "non-required arguments should be last" do
       opts = [arguments: [one: [], two: [required: false], three: []]]
-      assert_raise ArgumentError, ~r/:three was given after :two/, fn -> CLI.parse([], opts) end
+      assert_raise ArgumentError, ~r/:three was defined after :two/, fn -> CLI.parse([], opts) end
 
       # first late-required and closest non-required argument is used in error
       # message. So here error is between :d and :e
@@ -155,7 +155,7 @@ defmodule CliMate.CLI.ParserTest do
         ]
       ]
 
-      assert_raise ArgumentError, ~r/:e was given after :d/, fn -> CLI.parse([], opts) end
+      assert_raise ArgumentError, ~r/:e was defined after :d/, fn -> CLI.parse([], opts) end
     end
 
     test "extra arguments are an error" do
@@ -229,6 +229,65 @@ defmodule CliMate.CLI.ParserTest do
       assert_raise ArgumentError, ~r"expected argument type", fn ->
         CLI.parse(~w(1), opts)
       end
+    end
+
+    test ":repeat collects all remaining values into a list" do
+      opts = [arguments: [files: [repeat: true]]]
+
+      assert {:ok, %{arguments: %{files: ["a", "b", "c"]}}} =
+               CLI.parse(~w(a b c), opts)
+    end
+
+    test ":repeat required must appear at least once" do
+      opts = [arguments: [items: [repeat: true, required: true]]]
+      assert {:error, {:missing_argument, :items}} = CLI.parse([], opts)
+      assert {:ok, %{arguments: %{items: ["one"]}}} = CLI.parse(~w(one), opts)
+    end
+
+    test ":repeat optional returns empty list when absent" do
+      opts = [arguments: [items: [repeat: true, required: false]]]
+      assert {:ok, %{arguments: %{items: []}}} = CLI.parse([], opts)
+      assert {:ok, %{arguments: %{items: ["one", "two"]}}} = CLI.parse(~w(one two), opts)
+    end
+
+    test ":repeat with type validates every value" do
+      opts = [arguments: [nums: [repeat: true, type: :integer]]]
+      assert {:ok, %{arguments: %{nums: [1, 2, 3]}}} = CLI.parse(~w(1 2 3), opts)
+      assert {:error, {:argument_type, :nums, :integer}} = CLI.parse(~w(1 bad 3), opts)
+    end
+
+    test ":repeat with custom cast validates every value" do
+      cast = fn v ->
+        case Integer.parse(v) do
+          {i, ""} when rem(i, 2) == 0 -> {:ok, i}
+          _ -> {:error, "not an even integer"}
+        end
+      end
+
+      opts = [arguments: [evens: [repeat: true, cast: cast]]]
+      assert {:ok, %{arguments: %{evens: [2, 4, 6]}}} = CLI.parse(~w(2 4 6), opts)
+
+      assert {:error, {:argument_cast, :evens, "not an even integer"}} =
+               CLI.parse(~w(2 3 6), opts)
+    end
+
+    test ":repeat argument must be last" do
+      opts = [arguments: [first: [], rest: [repeat: true], after: [required: true]]]
+
+      assert_raise ArgumentError, ~r/:after was defined after :rest/, fn ->
+        CLI.parse(~w(a b), opts)
+      end
+    end
+
+    test "regular arguments can precede :repeat" do
+      opts = [arguments: [first: [], second: [], rest: [repeat: true]]]
+
+      assert {:ok, %{arguments: %{first: "a", second: "b", rest: ["c", "d"]}}} =
+               CLI.parse(~w(a b c d), opts)
+
+      # missing required regular arguments still errors before considering variadic
+      assert {:error, {:missing_argument, :first}} = CLI.parse([], opts)
+      assert {:error, {:missing_argument, :second}} = CLI.parse(~w(a), opts)
     end
   end
 end

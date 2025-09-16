@@ -63,7 +63,13 @@ defmodule CliMate.CLI.UsageFormat.OptionFormatter.PlainText do
   end
 
   defp arg_title(arg, ansi_enabled?) do
-    if ansi_enabled?, do: bright(Atom.to_string(arg.key)), else: Atom.to_string(arg.key)
+    title = if ansi_enabled?, do: bright(Atom.to_string(arg.key)), else: Atom.to_string(arg.key)
+
+    if arg.repeat do
+      [title, "..."]
+    else
+      title
+    end
   end
 
   @impl true
@@ -136,10 +142,14 @@ defmodule CliMate.CLI.UsageFormat.OptionFormatter.PlainText do
       end
 
     if type == :count || option.keep do
-      [signature, " (repeatable)"]
+      repeat_opt(signature)
     else
       signature
     end
+  end
+
+  defp repeat_opt(signature) do
+    [signature, " [...]"]
   end
 
   defp format_doc(%Argument{} = argument, width, pad_text) do

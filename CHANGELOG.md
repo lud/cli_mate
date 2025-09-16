@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.4] - 2025-09-16
+
+### 🚀 Features
+
+- Added support for repeatable arguments
+- Compress output of --help
+
 ## [0.8.3] - 2025-09-13
 
 ### 🚀 Features

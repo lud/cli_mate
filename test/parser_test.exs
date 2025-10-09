@@ -290,4 +290,20 @@ defmodule CliMate.CLI.ParserTest do
       assert {:error, {:missing_argument, :second}} = CLI.parse(~w(a), opts)
     end
   end
+
+  describe "using module based commands" do
+    test "accepts a module as the command definition" do
+      defmodule SomeCommand1 do
+        def command do
+          [arguments: [lang: [required: true]], options: [foo: [type: :integer, short: :f]]]
+        end
+      end
+
+      assert {:ok, %{options: %{help: false, foo: 123}, arguments: %{lang: "erlang"}}} =
+               CLI.parse(~w(-f 123 erlang), SomeCommand1)
+
+      assert {:ok, %{options: %{help: false, foo: 123}, arguments: %{lang: "erlang"}}} =
+               CLI.parse(~w(erlang --foo 123), SomeCommand1)
+    end
+  end
 end

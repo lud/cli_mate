@@ -88,13 +88,13 @@ defmodule CliMate.CLI.Option do
   @type vtype :: :integer | :float | :string | :count | :boolean
   @type t :: %__MODULE__{
           key: atom,
-          doc: binary,
+          doc: String.t(),
           type: vtype,
           short: atom,
           default: term,
           keep: boolean,
-          doc_arg: binary,
-          default_doc: binary
+          doc_arg: String.t(),
+          default_doc: String.t()
         }
 
   def new(key, conf) when is_atom(key) and is_list(conf) do

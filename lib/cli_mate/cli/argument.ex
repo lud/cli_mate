@@ -60,12 +60,13 @@ defmodule CliMate.CLI.Argument do
   defstruct @enforce_keys
 
   @type vtype :: :integer | :float | :string
+  @type caster :: (term -> {:ok, term} | {:error, term}) | {module, atom, [term]}
   @type t :: %__MODULE__{
           key: atom,
           required: boolean,
           type: vtype,
           doc: binary | nil,
-          cast: nil | (term -> {:ok, term} | {:error, term}) | {module, atom, [term]}
+          cast: nil | caster
         }
 
   def new(key, conf) when is_atom(key) and is_list(conf) do

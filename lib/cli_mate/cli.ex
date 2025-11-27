@@ -303,6 +303,11 @@ defmodule CliMate.CLI do
     end
   end
 
+  def parse(argv, module) when is_atom(module) do
+    Code.ensure_loaded!(module)
+    parse(argv, module.command())
+  end
+
   @doc """
   Attempts to parse the command line arguments `argv` with the defined
   command.

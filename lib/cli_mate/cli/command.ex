@@ -2,7 +2,43 @@ defmodule CliMate.CLI.Command do
   alias CliMate.CLI.Argument
   alias CliMate.CLI.Option
 
-  @moduledoc false
+  @moduledoc """
+  A behaviour to define module-based commands.
+  """
+
+  @type command :: [command_opt]
+  @type command_opt ::
+          {:name, String.t()}
+          | {:version, String.t()}
+          | {:module, module}
+          | {:doc, String.t()}
+          | {:options, [{atom, option}]}
+          | {:arguments, [{atom, argument}]}
+
+  @type option :: [option_opt]
+  @type option_opt ::
+          {:key, atom}
+          | {:doc, String.t()}
+          | {:type, Option.vtype()}
+          | {:short, atom}
+          | {:default, term}
+          | {:keep, boolean}
+          | {:doc_arg, String.t()}
+          | {:default_doc, String.t()}
+
+  @type argument :: [argument_opt]
+  @type argument_opt ::
+          {:key, atom}
+          | {:required, boolean}
+          | {:type, Argument.vtype()}
+          | {:doc, binary | nil}
+          | {:cast, nil | Argument.caster()}
+
+  @doc """
+  Returns a command definition to be used with the parser, or invoked as a sub
+  command.
+  """
+  @callback command :: command
 
   @enforce_keys [:arguments, :options]
   defstruct [:arguments, :options, :module, :name, :version, :doc]

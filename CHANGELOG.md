@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.0] - 2025-11-27
+
+### 🚀 Features
+
+- Enable support for module-based commands
+- Added cast capability to Option
+
 ## [0.8.4] - 2025-09-16
 
 ### 🚀 Features

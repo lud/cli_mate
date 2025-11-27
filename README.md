@@ -36,7 +36,7 @@ Detailed documentation is available on [HexDocs](https://hexdocs.pm/cli_mate):
 ```elixir
 def deps do
   [
-    {:cli_mate, "~> 0.8", runtime: false},
+    {:cli_mate, "~> 0.9", runtime: false},
   ]
 end
 ```
@@ -115,7 +115,7 @@ When using code generation, CliMate should now be used as a dev dependency:
 ```elixir
 def deps do
   [
-    {:cli_mate, "~> 0.8", only: [:dev, :test], runtime: false},
+    {:cli_mate, "~> 0.9", only: [:dev, :test], runtime: false},
   ]
 end
 ```

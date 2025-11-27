@@ -347,21 +347,59 @@ defmodule CliMate.CLI do
   defp opt_alias(%{short: a, key: key}), do: [{a, key}]
 
   defp take_opts(schemes, opts) do
-    all = Enum.reduce(schemes, %{}, fn scheme, acc -> collect_opt(scheme, opts, acc) end)
-    {:ok, all}
+    Enum.reduce_while(schemes, {:ok, %{}}, fn scheme, {:ok, acc} ->
+      case collect_opt(scheme, opts, acc) do
+        {:ok, acc} -> {:cont, {:ok, acc}}
+        {:error, _} = err -> {:halt, err}
+      end
+    end)
   end
 
   defp collect_opt({key, scheme}, opts, acc) do
     case scheme.keep do
       true ->
         list = collect_list_option(opts, key)
-        Map.put(acc, key, list)
+        cast_list_option(key, scheme.cast, list, acc)
 
       false ->
         case get_opt_value(opts, key, scheme.default) do
-          {:ok, value} -> Map.put(acc, key, value)
-          :skip -> acc
+          {:ok, :parsed, value} -> cast_single_option(key, scheme.cast, value, acc)
+          {:ok, :default, value} -> {:ok, Map.put(acc, key, value)}
+          :skip -> {:ok, acc}
         end
+    end
+  end
+
+  defp cast_single_option(key, cast, value, acc) do
+    case apply_cast(cast, value) do
+      {:ok, casted} ->
+        {:ok, Map.put(acc, key, casted)}
+
+      {:error, reason} ->
+        {:error, {:option_cast, key, reason}}
+
+      other ->
+        raise "Option custom caster #{inspect(cast)} returned invalid value: #{inspect(other)}"
+    end
+  end
+
+  defp cast_list_option(key, cast, list, acc) do
+    list
+    |> Enum.reduce_while({:ok, []}, fn value, {:ok, casted_list} ->
+      case apply_cast(cast, value) do
+        {:ok, casted} ->
+          {:cont, {:ok, [casted | casted_list]}}
+
+        {:error, reason} ->
+          {:halt, {:error, {:option_cast, key, reason}}}
+
+        other ->
+          raise "Option custom caster #{inspect(cast)} returned invalid value: #{inspect(other)}"
+      end
+    end)
+    |> case do
+      {:ok, reversed} -> {:ok, Map.put(acc, key, :lists.reverse(reversed))}
+      {:error, _} = err -> err
     end
   end
 
@@ -369,12 +407,12 @@ defmodule CliMate.CLI do
     case Keyword.fetch(opts, key) do
       :error ->
         case default do
-          {:default, v} -> {:ok, get_opt_default(v, key)}
+          {:default, v} -> {:ok, :default, get_opt_default(v, key)}
           :skip -> :skip
         end
 
       {:ok, v} ->
-        {:ok, v}
+        {:ok, :parsed, v}
     end
   end
 
@@ -485,6 +523,14 @@ defmodule CliMate.CLI do
 
   defp format_reason({:argument_cast, key, reason}) do
     ["error when casting argument ", Atom.to_string(key), ": ", safe_to_string(reason)]
+  end
+
+  defp format_reason({:option_cast, key, {:bad_return, br}}) do
+    ["could not cast option ", Atom.to_string(key), " bad return: ", inspect(br)]
+  end
+
+  defp format_reason({:option_cast, key, reason}) do
+    ["error when casting option ", Atom.to_string(key), ": ", safe_to_string(reason)]
   end
 
   defp format_reason({:argument_type, key, type}) do

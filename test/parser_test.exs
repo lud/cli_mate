@@ -105,6 +105,107 @@ defmodule CliMate.CLI.ParserTest do
     end
   end
 
+  describe "option casts" do
+    test "options can be casted with anonymous function" do
+      cast = fn v -> {:ok, String.upcase(v)} end
+      opts = [options: [name: [cast: cast]]]
+      assert {:ok, %{options: %{name: "HELLO"}}} = CLI.parse(~w(--name hello), opts)
+    end
+
+    test "options can be casted with MFA tuple" do
+      opts = [options: [num: [type: :integer, cast: {__MODULE__, :cast_double, []}]]]
+      assert {:ok, %{options: %{num: 10}}} = CLI.parse(~w(--num 5), opts)
+    end
+
+    test "options can be casted with MFA tuple with extra args" do
+      opts = [options: [num: [type: :integer, cast: {__MODULE__, :cast_multiply, [3]}]]]
+      assert {:ok, %{options: %{num: 15}}} = CLI.parse(~w(--num 5), opts)
+    end
+
+    def cast_double(v), do: {:ok, v * 2}
+    def cast_multiply(v, factor), do: {:ok, v * factor}
+
+    test "option cast can return error" do
+      cast = fn _ -> {:error, "invalid value"} end
+      opts = [options: [name: [cast: cast]]]
+      assert {:error, {:option_cast, :name, "invalid value"}} = CLI.parse(~w(--name bad), opts)
+    end
+
+    test "invalid option cast return raises" do
+      opts = [options: [name: [cast: fn _ -> :NOT_A_RESULT_TUPLE end]]]
+
+      assert_raise RuntimeError, ~r/returned invalid value/, fn ->
+        CLI.parse(~w(--name test), opts)
+      end
+    end
+
+    test "option cast with :keep applies to each value" do
+      cast = fn v -> {:ok, String.upcase(v)} end
+      opts = [options: [name: [keep: true, cast: cast]]]
+
+      assert {:ok, %{options: %{name: ["HELLO", "WORLD"]}}} =
+               CLI.parse(~w(--name hello --name world), opts)
+    end
+
+    test "option cast with :keep returns error on first failure" do
+      cast = fn
+        "bad" -> {:error, "bad value"}
+        v -> {:ok, String.upcase(v)}
+      end
+
+      opts = [options: [name: [keep: true, cast: cast]]]
+
+      assert {:error, {:option_cast, :name, "bad value"}} =
+               CLI.parse(~w(--name hello --name bad --name world), opts)
+    end
+
+    test "option cast with :keep and invalid return raises" do
+      cast = fn
+        "bad" -> :NOT_A_RESULT_TUPLE
+        v -> {:ok, v}
+      end
+
+      opts = [options: [name: [keep: true, cast: cast]]]
+
+      assert_raise RuntimeError, ~r/returned invalid value/, fn ->
+        CLI.parse(~w(--name hello --name bad), opts)
+      end
+    end
+
+    test "option cast receives typed value from OptionParser" do
+      # OptionParser converts to integer first, then cast receives integer
+      cast = fn v when is_integer(v) -> {:ok, v * 2} end
+      opts = [options: [num: [type: :integer, cast: cast]]]
+      assert {:ok, %{options: %{num: 10}}} = CLI.parse(~w(--num 5), opts)
+    end
+
+    test "option cast is NOT applied to default values" do
+      cast = fn v -> {:ok, String.upcase(v)} end
+      opts = [options: [name: [default: "default", cast: cast]]]
+      # Default value is NOT casted
+      assert {:ok, %{options: %{name: "default"}}} = CLI.parse([], opts)
+      # But provided value IS casted
+      assert {:ok, %{options: %{name: "HELLO"}}} = CLI.parse(~w(--name hello), opts)
+    end
+
+    test "option cast with :keep on empty list does not call cast" do
+      cast = fn _ -> raise "should not be called" end
+      opts = [options: [name: [keep: true, cast: cast]]]
+      # Empty list - cast should not be called
+      assert {:ok, %{options: %{name: []}}} = CLI.parse([], opts)
+    end
+
+    test "option cast validation rejects invalid casters" do
+      assert_raise ArgumentError, ~r/valid cast function/, fn ->
+        CLI.parse([], options: [name: [cast: "not a function"]])
+      end
+
+      assert_raise ArgumentError, ~r/valid cast function/, fn ->
+        CLI.parse([], options: [name: [cast: {:not_a_module}]])
+      end
+    end
+  end
+
   describe "the --help option" do
     test "is always defined" do
       assert {:ok, %{options: %{help: false}}} = CLI.parse(~w(), [])

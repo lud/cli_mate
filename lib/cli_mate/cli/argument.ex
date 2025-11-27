@@ -29,6 +29,11 @@ defmodule CliMate.CLI.Argument do
   the corresponding type. If that type deserialization fails, the cast function
   will not be called.
 
+  #### Repeated arguments
+
+  When the `:repeat` option is enabled, the cast function is called on each
+  value individually, not on the entire list.
+
   #### Returning errors
 
   Cast functions must return `{:ok, value}` or `{:error, reason}`. The `reason`
@@ -78,12 +83,20 @@ defmodule CliMate.CLI.Argument do
     repeat = Keyword.get(conf, :repeat, false)
 
     validate_type(type)
-    validate_cast(cast)
+    validate_cast!(cast)
 
     %__MODULE__{key: key, required: required, cast: cast, doc: doc, type: type, repeat: repeat}
   end
 
-  defp validate_cast(cast) do
+  @doc """
+  Validates that the given cast value is a valid caster.
+
+  A valid caster is either `nil`, a function of arity 1, or an MFA tuple
+  `{module, function, args}` where args is a list.
+
+  Raises `ArgumentError` if the cast is invalid.
+  """
+  def validate_cast!(cast) do
     case cast do
       f when is_function(f, 1) ->
         :ok

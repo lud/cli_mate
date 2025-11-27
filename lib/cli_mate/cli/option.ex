@@ -45,6 +45,26 @@ defmodule CliMate.CLI.Option do
   * `:default_doc` - The string to output when CliMate does not know how to
     display the default value. That is, when the default value is defined by a
     function. Not used when `:default` is not defined.
+  * `:cast` - A fun accepting the value, or a `{module, function, arguments}`,
+    returning a result tuple. See the "Casting" section below for more
+    information.
+
+  ### Casting
+
+  When the `:cast` option is a fun, it will be called with the parsed value
+  (after `OptionParser` has converted it to the appropriate type). When it is an
+  "MFA" tuple, the parsed value will be prepended to the given arguments.
+
+  Cast functions must return `{:ok, value}` or `{:error, reason}`. The `reason`
+  can be anything, but at the moment CliMate doesn't do any special formatting
+  on it to display errors (besides calling `to_string/1` with a safe fallback to
+  `inspect/1`). It is advised to return a meaningful error message as the
+  reason.
+
+  When the `:keep` option is enabled, the cast function is called on each value
+  individually, not on the entire list.
+
+  Note that cast functions are NOT applied to default values.
 
   ### Default values
 
@@ -82,10 +102,11 @@ defmodule CliMate.CLI.Option do
       end
 
   """
-  @enforce_keys [:key, :doc, :type, :short, :default, :keep, :doc_arg, :default_doc]
+  @enforce_keys [:key, :doc, :type, :short, :default, :keep, :doc_arg, :default_doc, :cast]
   defstruct @enforce_keys
 
   @type vtype :: :integer | :float | :string | :count | :boolean
+  @type caster :: (term -> {:ok, term} | {:error, term}) | {module, atom, [term]}
   @type t :: %__MODULE__{
           key: atom,
           doc: String.t(),
@@ -94,7 +115,8 @@ defmodule CliMate.CLI.Option do
           default: term,
           keep: boolean,
           doc_arg: String.t(),
-          default_doc: String.t()
+          default_doc: String.t(),
+          cast: nil | caster
         }
 
   def new(key, conf) when is_atom(key) and is_list(conf) do
@@ -104,6 +126,9 @@ defmodule CliMate.CLI.Option do
     short = Keyword.get(conf, :short, nil)
     doc_arg = Keyword.get_lazy(conf, :doc_arg, fn -> default_doc_arg(type) end)
     default_doc = Keyword.get(conf, :default_doc, nil)
+    cast = Keyword.get(conf, :cast, nil)
+
+    CliMate.CLI.Argument.validate_cast!(cast)
 
     default =
       case Keyword.fetch(conf, :default) do
@@ -120,7 +145,8 @@ defmodule CliMate.CLI.Option do
       default: default,
       keep: keep,
       doc_arg: doc_arg,
-      default_doc: default_doc
+      default_doc: default_doc,
+      cast: cast
     }
   end
 

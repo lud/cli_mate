@@ -29,7 +29,7 @@ defmodule CliMate.CLI.ParserTest do
 
     test "boolean option can be missing" do
       opts = [options: [doit: [type: :boolean]]]
-      assert {:ok, %{options: %{help: false}, arguments: %{}}} == CLI.parse([], opts)
+      assert {:ok, %{options: %{help: false}, arguments: %{}}} = CLI.parse([], opts)
     end
 
     test "boolean option can default to false" do
@@ -82,6 +82,34 @@ defmodule CliMate.CLI.ParserTest do
       opts = [options: [port: [default: &my_default_opt/1], scheme: [default: &my_default_opt/1]]]
 
       assert {:ok, %{options: %{port: 3000, scheme: "https"}}} = CLI.parse([], opts)
+    end
+
+    test ":keep option without an explicit default returns an empty list" do
+      opts = [options: [tags: [keep: true]]]
+      assert {:ok, %{options: %{tags: []}}} = CLI.parse([], opts)
+    end
+
+    test ":keep option with an explicit list default" do
+      opts = [options: [tags: [keep: true, default: ["a", "b"]]]]
+      assert {:ok, %{options: %{tags: ["a", "b"]}}} = CLI.parse([], opts)
+      # passing values replaces the default entirely
+      assert {:ok, %{options: %{tags: ["x"]}}} = CLI.parse(~w(--tags x), opts)
+    end
+
+    test ":keep option accepts a non-list default value" do
+      opts = [options: [tags: [keep: true, default: :all]]]
+      assert {:ok, %{options: %{tags: :all}}} = CLI.parse([], opts)
+      assert {:ok, %{options: %{tags: ["x", "y"]}}} = CLI.parse(~w(--tags x --tags y), opts)
+    end
+
+    test ":keep option accepts a string default value" do
+      opts = [options: [mode: [keep: true, default: "none"]]]
+      assert {:ok, %{options: %{mode: "none"}}} = CLI.parse([], opts)
+    end
+
+    test ":keep option default can be provided by a function" do
+      opts = [options: [tags: [keep: true, default: fn -> [:a, :b] end]]]
+      assert {:ok, %{options: %{tags: [:a, :b]}}} = CLI.parse([], opts)
     end
 
     test "last flag wins when duplicate options are provided" do

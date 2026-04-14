@@ -25,6 +25,13 @@ defmodule CliMate.CLI do
       end
   """
 
+  @type parsed :: %{
+          required(:options) => map,
+          required(:arguments) => map,
+          required(:path) => [atom],
+          optional(:execute) => function
+        }
+
   # -----------------------------------------------------------------------
   # Shell
   # -----------------------------------------------------------------------
@@ -280,32 +287,126 @@ defmodule CliMate.CLI do
       {:error, {:argument_cast, :date, :invalid_format}}
   """
   @doc section: :parser
-  def parse(argv, command) when is_list(command) do
-    parse(argv, Command.new(command))
-  end
 
-  def parse(argv, %Command{} = command) do
-    options = command.options
-    arguments = command.arguments
-
-    strict = Enum.map(options, fn {key, opt} -> {key, opt_to_switch(opt)} end)
-    aliases = Enum.flat_map(options, fn {_, opt} -> opt_alias(opt) end)
-
-    with {parsed_options, parsed_arguments, []} <-
-           OptionParser.parse(argv, strict: strict, aliases: aliases),
-         {:ok, %{help: false} = options_found} <- take_opts(options, parsed_options),
-         {:ok, arguments_found} <- take_args(arguments, parsed_arguments) do
-      {:ok, %{options: options_found, arguments: arguments_found}}
-    else
-      {:ok, %{help: true} = options_found} -> {:ok, %{options: options_found, arguments: []}}
-      {_, _, invalid} -> {:error, {:invalid, invalid}}
-      {:error, _} = err -> err
+  def parse(argv, command) do
+    case do_parse(argv, command) do
+      {:ok, parsed, _resolved_command} -> {:ok, parsed}
+      {:error, reason, _resolved_command} -> {:error, reason}
     end
   end
 
-  def parse(argv, module) when is_atom(module) do
-    Code.ensure_loaded!(module)
-    parse(argv, module.command())
+  def do_parse(argv, command) when is_list(command) when is_atom(command) do
+    do_parse(argv, Command.new(command))
+  end
+
+  def do_parse(argv, %Command{} = command) do
+    parse_loop(
+      argv,
+      command,
+      _parent_opts_specs = [],
+      _opts_acc = %{},
+      _parsed_keys = MapSet.new(),
+      _sub_path = []
+    )
+  end
+
+  defp parse_loop(argv, command, parent_opts_specs, opts_acc, parsed_keys, rev_sub_path) do
+    %{subcommands: subcommands} = command
+
+    case subcommands do
+      [] ->
+        parse_leaf(argv, command, parent_opts_specs, opts_acc, parsed_keys, rev_sub_path)
+
+      [_ | _] ->
+        parse_nested(argv, command, parent_opts_specs, opts_acc, parsed_keys, rev_sub_path)
+    end
+  end
+
+  defp parse_leaf(argv, command, parent_opts_specs, opts_acc, parsed_keys, rev_sub_path) do
+    command = merge_opts_in(command, parent_opts_specs)
+    %{options: options, arguments: arguments} = command
+
+    with {:ok, parsed_options, parsed_arguments} <- parse_opts(argv, options),
+         {:ok, %{help: false} = new_acc, _new_parsed_keys} <-
+           take_opts(options, parsed_options, opts_acc, parsed_keys),
+         {:ok, found_args} <- take_args(arguments, parsed_arguments) do
+      ok_build_parsed(command, new_acc, found_args, rev_sub_path)
+    else
+      {:ok, %{help: true} = new_acc, _new_parsed_keys} ->
+        ok_build_parsed(command, new_acc, [], rev_sub_path, :help)
+
+      {:error, reason} ->
+        {:error, reason, command}
+    end
+  end
+
+  defp parse_nested(argv, command, parent_opts_specs, opts_acc, parsed_keys, rev_sub_path) do
+    command = merge_opts_in(command, parent_opts_specs)
+    %{options: options} = command
+
+    with {:ok, parsed_options, rest} <- parse_head_opts(argv, options),
+         {:ok, %{help: false} = new_acc, new_parsed_keys} <-
+           take_opts(options, parsed_options, opts_acc, parsed_keys),
+         {:ok, [bin_sub | rest]} <- ensure_subcommand(rest),
+         {:ok, key, sub_command} <- Command.resolve_subcommand(command, bin_sub) do
+      parse_loop(rest, sub_command, options, new_acc, new_parsed_keys, [key | rev_sub_path])
+    else
+      {:ok, %{help: true} = new_acc, _new_parsed_keys} ->
+        ok_build_parsed(command, new_acc, [], rev_sub_path)
+
+      {:error, reason} ->
+        {:error, reason, command}
+    end
+  end
+
+  defp ok_build_parsed(command, options, arguments, rev_sub_path, mode \\ :normal) do
+    parsed = build_parsed(command, options, arguments, rev_sub_path, mode)
+    {:ok, parsed, command}
+  end
+
+  defp build_parsed(command, options, arguments, rev_sub_path, mode) do
+    base = %{options: options, arguments: arguments, path: :lists.reverse(rev_sub_path)}
+
+    execute =
+      case command.execute do
+        nil -> nil
+        _ when mode == :help -> nil
+        fun -> fn -> fun.(base) end
+      end
+
+    Map.put(base, :execute, execute)
+  end
+
+  defp opts_specs_to_switches(options) do
+    strict = Enum.map(options, fn {key, opt} -> {key, opt_to_switch(opt)} end)
+    aliases = Enum.flat_map(options, fn {_, opt} -> opt_alias(opt) end)
+    {strict, aliases}
+  end
+
+  defp parse_opts(argv, options) do
+    {strict, aliases} = opts_specs_to_switches(options)
+
+    case OptionParser.parse(argv, strict: strict, aliases: aliases) do
+      {parsed_opts, parsed_args, []} -> {:ok, parsed_opts, parsed_args}
+      {_, _, [_ | _] = invalid} -> {:error, {:invalid, invalid}}
+    end
+  end
+
+  defp parse_head_opts(argv, options) do
+    {strict, aliases} = opts_specs_to_switches(options)
+
+    case OptionParser.parse_head(argv, strict: strict, aliases: aliases) do
+      {parsed_opts, rest, []} -> {:ok, parsed_opts, rest}
+      # {parsed_opts, [], []} -> {:error, :missing_subcommand}
+      {_, _, [_ | _] = invalid} -> {:error, {:invalid, invalid}}
+    end
+  end
+
+  defp ensure_subcommand(rest) do
+    case rest do
+      [_ | _] -> {:ok, rest}
+      [] -> {:error, :missing_subcommand}
+    end
   end
 
   @doc """
@@ -324,17 +425,17 @@ defmodule CliMate.CLI do
   """
   @doc section: :parser
   def parse_or_halt!(argv, command) do
-    case parse(argv, command) do
-      {:ok, %{options: %{help: true}}} ->
-        write(format_usage(command, ansi_enabled: IO.ANSI.enabled?()))
+    case do_parse(argv, command) do
+      {:ok, %{options: %{help: true}}, resolved} ->
+        write(format_usage(resolved, io_columns: io_columns(), ansi_enabled: IO.ANSI.enabled?()))
         halt(0)
         :halt
 
-      {:ok, parsed} ->
+      {:ok, parsed, _} ->
         parsed
 
-      {:error, reason} ->
-        write(format_usage(command, ansi_enabled: IO.ANSI.enabled?()))
+      {:error, reason, resolved} ->
+        write(format_usage(resolved, io_columns: io_columns(), ansi_enabled: IO.ANSI.enabled?()))
         error(format_reason(reason))
         halt(1)
         :halt
@@ -346,28 +447,57 @@ defmodule CliMate.CLI do
   defp opt_alias(%{short: nil}), do: []
   defp opt_alias(%{short: a, key: key}), do: [{a, key}]
 
-  defp take_opts(schemes, opts) do
-    Enum.reduce_while(schemes, {:ok, %{}}, fn scheme, {:ok, acc} ->
-      case collect_opt(scheme, opts, acc) do
-        {:ok, acc} -> {:cont, {:ok, acc}}
+  defp take_opts(schemes, opts, acc, parsed_keys) do
+    Enum.reduce_while(schemes, {:ok, acc, parsed_keys}, fn scheme, {:ok, acc, parsed_keys} ->
+      case collect_opt(scheme, opts, acc, parsed_keys) do
+        {:ok, acc, parsed_keys} -> {:cont, {:ok, acc, parsed_keys}}
         {:error, _} = err -> {:halt, err}
       end
     end)
   end
 
-  defp collect_opt({key, scheme}, opts, acc) do
-    case scheme.keep do
-      true ->
-        list = collect_list_option(opts, key)
-        cast_list_option(key, scheme.cast, list, acc)
-
-      false ->
-        case get_opt_value(opts, key, scheme.default) do
-          {:ok, :parsed, value} -> cast_single_option(key, scheme.cast, value, acc)
-          {:ok, :default, value} -> {:ok, Map.put(acc, key, value)}
-          :skip -> {:ok, acc}
+  defp collect_opt({key, scheme}, opts, acc, parsed_keys) do
+    case resolve_opt_value(scheme, opts) do
+      {:ok, :parsed, value} ->
+        with {:ok, acc} <- cast_parsed_value(scheme, key, value, acc) do
+          {:ok, acc, MapSet.put(parsed_keys, key)}
         end
+
+      {:ok, :default, value} ->
+        if MapSet.member?(parsed_keys, key) do
+          {:ok, acc, parsed_keys}
+        else
+          {:ok, Map.put(acc, key, value), parsed_keys}
+        end
+
+      :skip ->
+        {:ok, acc, parsed_keys}
     end
+  end
+
+  defp resolve_opt_value(%{keep: true, key: key, default: default}, opts) do
+    case collect_list_option(opts, key) do
+      [] -> default_to_result(default, key)
+      list -> {:ok, :parsed, list}
+    end
+  end
+
+  defp resolve_opt_value(%{keep: false, key: key, default: default}, opts) do
+    case Keyword.fetch(opts, key) do
+      :error -> default_to_result(default, key)
+      {:ok, v} -> {:ok, :parsed, v}
+    end
+  end
+
+  defp default_to_result({:default, v}, key), do: {:ok, :default, get_opt_default(v, key)}
+  defp default_to_result(:skip, _key), do: :skip
+
+  defp cast_parsed_value(%{keep: true, cast: cast}, key, list, acc) do
+    cast_list_option(key, cast, list, acc)
+  end
+
+  defp cast_parsed_value(%{keep: false, cast: cast}, key, value, acc) do
+    cast_single_option(key, cast, value, acc)
   end
 
   defp cast_single_option(key, cast, value, acc) do
@@ -403,25 +533,20 @@ defmodule CliMate.CLI do
     end
   end
 
-  defp get_opt_value(opts, key, default) do
-    case Keyword.fetch(opts, key) do
-      :error ->
-        case default do
-          {:default, v} -> {:ok, :default, get_opt_default(v, key)}
-          :skip -> :skip
-        end
-
-      {:ok, v} ->
-        {:ok, :parsed, v}
-    end
-  end
-
   defp get_opt_default(f, _) when is_function(f, 0), do: f.()
   defp get_opt_default(f, key) when is_function(f, 1), do: f.(key)
   defp get_opt_default(raw, _), do: raw
 
   defp collect_list_option(opts, key) do
     opts |> Enum.filter(fn {k, _} -> k == key end) |> Enum.map(&elem(&1, 1))
+  end
+
+  defp merge_opts_in(%Command{options: child_specs} = command, parent_specs) do
+    %{command | options: merge_opts_specs(parent_specs, child_specs)}
+  end
+
+  defp merge_opts_specs(parent_specs, child_specs) do
+    Keyword.merge(parent_specs, child_specs)
   end
 
   defp take_args(schemes, args) do
@@ -549,6 +674,14 @@ defmodule CliMate.CLI do
     ["missing argument ", Atom.to_string(key)]
   end
 
+  defp format_reason(:missing_subcommand) do
+    "missing sub-command"
+  end
+
+  defp format_reason({:unknown_subcommand, name}) do
+    ["unknown sub-command ", name]
+  end
+
   # -----------------------------------------------------------------------
   #  Usage Format
   # -----------------------------------------------------------------------
@@ -567,7 +700,7 @@ defmodule CliMate.CLI do
   """
   def format_usage(command, opts \\ [])
 
-  def format_usage(command, opts) when is_list(command) do
+  def format_usage(command, opts) when is_list(command) when is_atom(command) do
     format_usage(Command.new(command), opts)
   end
 
@@ -668,6 +801,14 @@ defmodule CliMate.CLI do
           args = Enum.map(1..arity, &Macro.var(:"arg#{&1}", __MODULE__))
           defdelegate unquote(fun)(unquote_splicing(args)), to: CliMate.CLI
       end)
+    end
+  end
+
+  @doc false
+  def io_columns do
+    case :io.columns() do
+      {:ok, n} -> n
+      _ -> 78
     end
   end
 end

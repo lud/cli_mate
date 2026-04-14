@@ -133,7 +133,7 @@ defmodule CliMate.CLI.Option do
     default =
       case Keyword.fetch(conf, :default) do
         {:ok, term} -> {:default, term}
-        :error when type == :boolean -> :skip
+        :error when keep -> {:default, []}
         :error -> :skip
       end
 

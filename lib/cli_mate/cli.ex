@@ -285,6 +285,27 @@ defmodule CliMate.CLI do
       iex> cast = {Date, :from_iso8601, []}
       iex> parse(["not-a-date"], arguments: [date: [cast: cast]])
       {:error, {:argument_cast, :date, :invalid_format}}
+
+  ### Parse result
+
+  On success, returns `{:ok, parsed}` where `parsed` is a map with:
+
+  * `:options` — map of parsed option values (with defaults applied).
+  * `:arguments` — map of parsed positional arguments.
+  * `:path` — list of sub-command keys resolved, in order (empty for a flat
+    command).
+  * `:execute` — a zero-arity closure when the resolved command defines an
+    `:execute` function (or a module-based command implementing `execute/1`),
+    otherwise `nil`. Calling it invokes the function with the parsed map (with
+    the `:execute` key removed). Always `nil` when `--help` was given.
+
+  ### Sub-commands
+
+  A command may declare `:subcommands` instead of `:arguments`. The first
+  positional argument is then consumed as the sub-command name and parsing
+  recurses into the selected child. Options declared on a parent are inherited
+  and can be passed on any level. See `#{inspect(__MODULE__)}.Command` for the
+  full inheritance and merging rules.
   """
   @doc section: :parser
 

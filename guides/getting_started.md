@@ -181,6 +181,39 @@ You can include command usage in your module documentation:
 """
 ```
 
+## Sub-commands
+
+A command can declare `:subcommands` instead of `:arguments` to dispatch to nested commands (think `git remote add`). Each sub-command is a keyword list with the same shape as a top-level command, or a module implementing the `CliMate.CLI.Command` behaviour.
+
+```elixir
+@command name: "mix myapp",
+         options: [verbose: [type: :boolean, default: false]],
+         subcommands: [
+           build: [
+             options: [target: [type: :string, default: "dev"]],
+             execute: &MyApp.Build.run/1
+           ],
+           deploy: MyApp.Tasks.Deploy
+         ]
+```
+
+Options declared on the parent are inherited by sub-commands and can be passed at any level (`mix myapp --verbose build` or `mix myapp build --verbose`). A value explicitly passed on the command line always wins over defaults. See `CliMate.CLI.Command` for the full merging rules.
+
+The parsed map exposes `:path` (the resolved sub-command keys) and `:execute` (a zero-arity closure when the selected command defines an `:execute` function, or `nil` otherwise):
+
+```elixir
+def run(argv) do
+  parsed = CLI.parse_or_halt!(argv, @command)
+
+  case parsed.execute do
+    nil -> IO.puts("path: #{inspect(parsed.path)}")
+    run -> run.()
+  end
+end
+```
+
+When using a module-based sub-command, implement the `execute/1` callback on the module and it will be wired automatically.
+
 ## Advanced Usage
 
 For more detailed information on configuring options and arguments, see:

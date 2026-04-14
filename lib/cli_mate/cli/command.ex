@@ -4,6 +4,37 @@ defmodule CliMate.CLI.Command do
 
   @moduledoc """
   A behaviour to define module-based commands.
+
+  A command is a keyword list (or a module implementing this behaviour) and
+  accepts these top-level entries:
+
+  * `:options` — option schema (see `CliMate.CLI.Option`).
+  * `:arguments` — positional argument schema.
+  * `:subcommands` — a keyword list of nested commands. A command cannot declare
+    both `:arguments` and `:subcommands`; the first positional slot is consumed
+    as the sub-command name. A sub-command value can be an inline keyword list,
+    or a module implementing this behaviour.
+  * `:execute` — a 1-arity function called with the parsed result. Also provided
+    via the `execute/1` callback on module-based commands. When a command with
+    `:execute` is selected, `CliMate.CLI.parse/2` returns the parsed map with an
+    `:execute` key holding a zero-arity closure; calling it runs the function
+    with the parsed map (minus the `:execute` key). Returns `nil` when no
+    execute is defined or when `--help` was requested.
+  * `:name`, `:version`, `:doc` — metadata used by `format_usage/2`.
+
+  ### Option inheritance across sub-commands
+
+  Options declared on a parent command are inherited by sub-commands and can be
+  passed on any level where the command is being parsed. Merging rules for the
+  final `:options` map:
+
+  * A value explicitly parsed from argv at any level wins and is never
+    overwritten by a default from a deeper level.
+  * If an option is not passed on argv, the default from the deepest level that
+    declares the option is used. Redefining an option at a child level replaces
+    the parent entry entirely (including `:short` and `:keep`).
+  * `:keep` lists are not accumulated across levels: the list parsed at a given
+    level replaces any previously accumulated list.
   """
 
   @type command :: [command_opt]
@@ -14,6 +45,8 @@ defmodule CliMate.CLI.Command do
           | {:doc, String.t()}
           | {:options, [{atom, option}]}
           | {:arguments, [{atom, argument}]}
+          | {:subcommands, [{atom, command | module | t}]}
+          | {:execute, (map -> term)}
 
   @type option :: [option_opt]
   @type option_opt ::

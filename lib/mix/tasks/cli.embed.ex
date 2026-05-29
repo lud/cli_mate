@@ -101,7 +101,7 @@ defmodule Mix.Tasks.Cli.Embed do
       |> Path.join("**/*.ex")
       |> Path.wildcard()
       |> Enum.map(fn source_path ->
-        <<^source_root_path::binary-size(source_root_size), target_sub_path::binary>> =
+        <<^source_root_path::binary-size(^source_root_size), target_sub_path::binary>> =
           source_path
 
         target_path = Path.relative_to_cwd(target_root_path <> target_sub_path)

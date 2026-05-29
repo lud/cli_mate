@@ -3,7 +3,8 @@ defmodule CliMate.CLI.ExtendTest do
 
   test "modules can extend the cli" do
     defmodule ExtendsTheCLI do
-      require(CliMate.CLI).extend()
+      require CliMate.CLI
+      CliMate.CLI.extend()
     end
 
     exports = ExtendsTheCLI.module_info(:exports)

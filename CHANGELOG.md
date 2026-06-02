@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.2] - 2026-06-02
+
+### 📚 Documentation
+
+- Enable ex_doc markdown formatter
+
 ## [0.10.1] - 2026-05-29
 
 ### ⚙️ Miscellaneous Tasks

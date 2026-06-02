@@ -57,7 +57,7 @@ defmodule CliMate.MixProject do
       main: "readme",
       source_url: @source_url,
       source_ref: "v#{@version}",
-      formatters: ["html"],
+      formatters: ["html", "markdown"],
       groups_for_modules: [
         Parsing: &(&1[:section] == :parser),
         "Shell & IO": &(&1[:section] == :io)

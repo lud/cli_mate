@@ -74,6 +74,19 @@ defmodule CliMate.CLI.Argument do
           cast: nil | caster
         }
 
+  @doc """
+  Builds an argument struct from its key and settings.
+
+  The accepted settings are listed in the module documentation. Raises an
+  `ArgumentError` when the type or the cast function is invalid.
+
+  ### Examples
+
+  Settings that are not provided are given default values:
+
+      iex> CliMate.CLI.Argument.new(:lang, [])
+      %CliMate.CLI.Argument{key: :lang, required: true, cast: nil, doc: "", type: :string, repeat: false}
+  """
   def new(key, conf) when is_atom(key) and is_list(conf) do
     required = Keyword.get(conf, :required, true)
     cast = Keyword.get(conf, :cast, nil)

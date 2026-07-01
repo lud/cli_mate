@@ -263,7 +263,7 @@ defmodule Mix.Tasks.Cli.Embed do
   defp read_source(path, %{force: true}), do: File.read!(path)
   defp read_source(_path, _), do: []
 
-  def generate_banner(argv) do
+  defp generate_banner(argv) do
     quoted =
       Enum.map_intersperse(argv, " ", fn arg ->
         if String.match?(arg, ~r/\s/),

@@ -43,6 +43,7 @@ if Mix.env() != :prod do
       end
     end
 
+    @doc false
     def cast_base("two"), do: {:ok, 2}
     def cast_base("eight"), do: {:ok, 8}
     def cast_base(v), do: {:error, {:invalid_base, v}}

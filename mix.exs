@@ -14,6 +14,7 @@ defmodule CliMate.MixProject do
       docs: docs(),
       versioning: versioning(),
       name: "CLI Mate",
+      source_url: @source_url,
       elixirc_paths: elixirc_paths(Mix.env()),
       package: package(),
       dialyzer: dialyzer()
@@ -26,11 +27,7 @@ defmodule CliMate.MixProject do
 
   defp deps do
     [
-      {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
-      {:ex_doc, ">= 0.0.0", only: :dev, runtime: false},
-      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
-      {:ex_check, "~> 0.16.0", only: [:dev, :test], runtime: false},
-      {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false}
+      {:libdev, ">= 0.0.0", only: [:dev, :test], runtime: false}
     ]
   end
 

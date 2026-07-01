@@ -35,7 +35,7 @@ defmodule CliMate.CLI.ProcessShell do
   end
 
   @spec build_message(kind, iodata) :: {unquote(@tag), kind, iodata()}
-  def build_message(kind, iodata) do
+  defp build_message(kind, iodata) do
     {@tag, kind, format_message(iodata)}
   end
 

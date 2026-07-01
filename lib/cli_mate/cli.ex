@@ -316,11 +316,11 @@ defmodule CliMate.CLI do
     end
   end
 
-  def do_parse(argv, command) when is_list(command) when is_atom(command) do
+  defp do_parse(argv, command) when is_list(command) when is_atom(command) do
     do_parse(argv, Command.new(command))
   end
 
-  def do_parse(argv, %Command{} = command) do
+  defp do_parse(argv, %Command{} = command) do
     parse_loop(
       argv,
       command,

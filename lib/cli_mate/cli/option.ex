@@ -119,6 +119,22 @@ defmodule CliMate.CLI.Option do
           cast: nil | caster
         }
 
+  @doc """
+  Builds an option struct from its key and settings.
+
+  The accepted settings are listed in the module documentation. Raises an
+  `ArgumentError` when the cast function is invalid.
+
+  ### Examples
+
+  Settings that are not provided are given default values:
+
+      iex> option = CliMate.CLI.Option.new(:verbose, type: :boolean, short: :v)
+      iex> option.short
+      :v
+      iex> option.keep
+      false
+  """
   def new(key, conf) when is_atom(key) and is_list(conf) do
     keep = Keyword.get(conf, :keep, false)
     type = Keyword.get(conf, :type, :string)

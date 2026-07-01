@@ -92,6 +92,25 @@ defmodule CliMate.CLI.Command do
 
   @help_option_def [type: :boolean, default: false, doc: "Displays this help."]
 
+  @doc """
+  Builds a command struct from a keyword definition, or from a module
+  implementing this behaviour.
+
+  The accepted entries are listed in the module documentation. Raises an
+  `ArgumentError` for invalid definitions, for instance when a command declares
+  both `:arguments` and `:subcommands`.
+
+  ### Examples
+
+  The returned struct holds the normalized options, including the automatic
+  `:help` option:
+
+      iex> command = CliMate.CLI.Command.new(name: "hello", options: [upcase: [type: :boolean]])
+      iex> command.name
+      "hello"
+      iex> Keyword.keys(command.options)
+      [:upcase, :help]
+  """
   def new(conf) when is_list(conf) do
     options =
       conf
@@ -201,6 +220,15 @@ defmodule CliMate.CLI.Command do
           "invalid :execute option expected function of arity 1 or nil, got: #{inspect(other)}"
   end
 
+  @doc """
+  Resolves a sub-command name given on the command line into its definition
+  from the parent command.
+
+  Returns `{:ok, key, sub_command}` where `key` is the atom form of `bin_key`
+  and `sub_command` is the resolved definition built with `new/1`. Returns
+  `{:error, {:unknown_subcommand, bin_key}}` when the name matches no declared
+  sub-command.
+  """
   def resolve_subcommand(command, bin_key) do
     String.to_existing_atom(bin_key)
   rescue

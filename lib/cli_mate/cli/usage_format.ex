@@ -82,11 +82,19 @@ defmodule CliMate.CLI.UsageFormat do
       end
 
     options_section =
-      adapter.format_section("Options", adapter.format_options(command, fmt_opts), fmt_opts)
+      adapter.format_section(
+        "Options",
+        adapter.format_options(without_deprecated_options(command), fmt_opts),
+        fmt_opts
+      )
 
     [head, synopsis_section, subcommands_section, arguments_section, options_section]
     |> Enum.reject(&is_nil/1)
     |> Enum.intersperse(adapter.section_margin())
+  end
+
+  defp without_deprecated_options(command) do
+    %{command | options: Enum.reject(command.options, fn {_, opt} -> opt.deprecated end)}
   end
 
   defp build_subcommands(command) do

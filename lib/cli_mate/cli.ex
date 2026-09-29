@@ -1,6 +1,7 @@
 defmodule CliMate.CLI do
   alias CliMate.CLI.Argument
   alias CliMate.CLI.Command
+  alias CliMate.CLI.Option
   alias CliMate.CLI.UsageFormat
 
   @moduledoc """
@@ -468,19 +469,21 @@ defmodule CliMate.CLI do
   defp opt_alias(%{short: nil}), do: []
   defp opt_alias(%{short: a, key: key}), do: [{a, key}]
 
-  defp take_opts(schemes, opts, acc, parsed_keys) do
+  defp take_opts(schemes, parsed_opts, acc, parsed_keys) do
     Enum.reduce_while(schemes, {:ok, acc, parsed_keys}, fn scheme, {:ok, acc, parsed_keys} ->
-      case collect_opt(scheme, opts, acc, parsed_keys) do
+      case collect_opt(scheme, parsed_opts, acc, parsed_keys) do
         {:ok, acc, parsed_keys} -> {:cont, {:ok, acc, parsed_keys}}
         {:error, _} = err -> {:halt, err}
       end
     end)
   end
 
-  defp collect_opt({key, scheme}, opts, acc, parsed_keys) do
-    case resolve_opt_value(scheme, opts) do
+  defp collect_opt({key, scheme}, parsed_opts, acc, parsed_keys) do
+    case resolve_opt_value(scheme, parsed_opts) do
       {:ok, :parsed, value} ->
         with {:ok, acc} <- cast_parsed_value(scheme, key, value, acc) do
+          maybe_warn_deprecated_opt(scheme, parsed_keys)
+
           {:ok, acc, MapSet.put(parsed_keys, key)}
         end
 
@@ -494,6 +497,25 @@ defmodule CliMate.CLI do
       :skip ->
         {:ok, acc, parsed_keys}
     end
+  end
+
+  defp maybe_warn_deprecated_opt(%{deprecated: deprecated} = scheme, parsed_keys)
+       when deprecated == true or is_binary(deprecated) do
+    if not MapSet.member?(parsed_keys, scheme.key) do
+      warn(deprecation_message(scheme))
+    end
+  end
+
+  defp maybe_warn_deprecated_opt(_scheme, _parsed_keys) do
+    :ok
+  end
+
+  defp deprecation_message(%{deprecated: true} = scheme) do
+    "option --#{Option.cli_name(scheme)} is deprecated"
+  end
+
+  defp deprecation_message(%{deprecated: message} = scheme) when is_binary(message) do
+    "option --#{Option.cli_name(scheme)} is deprecated, #{message}"
   end
 
   defp resolve_opt_value(%{keep: true, key: key, default: default}, opts) do

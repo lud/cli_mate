@@ -48,6 +48,13 @@ defmodule CliMate.CLI.Option do
   * `:cast` - A fun accepting the value, or a `{module, function, arguments}`,
     returning a result tuple. See the "Casting" section below for more
     information.
+  * `:deprecated` - Accepts a boolean or a string like `"use --bar instead"`.
+    When the option is provided on the command line, a warning is printed once
+    on stderr: `option --foo is deprecated` for `true`, or `option --foo is
+    deprecated, use --bar instead` for a string. The string is where the
+    deprecation is explained, as `:doc` is ignored for deprecated options.
+    Deprecated options are hidden from usage blocks and generated docs, but
+    their value is still parsed and returned like any other option.
 
   ### Casting
 
@@ -102,7 +109,18 @@ defmodule CliMate.CLI.Option do
       end
 
   """
-  @enforce_keys [:key, :doc, :type, :short, :default, :keep, :doc_arg, :default_doc, :cast]
+  @enforce_keys [
+    :key,
+    :doc,
+    :type,
+    :short,
+    :default,
+    :keep,
+    :doc_arg,
+    :default_doc,
+    :cast,
+    :deprecated
+  ]
   defstruct @enforce_keys
 
   @type vtype :: :integer | :float | :string | :count | :boolean
@@ -116,7 +134,8 @@ defmodule CliMate.CLI.Option do
           keep: boolean,
           doc_arg: String.t(),
           default_doc: String.t(),
-          cast: nil | caster
+          cast: nil | caster,
+          deprecated: nil | boolean | String.t()
         }
 
   @doc """
@@ -143,6 +162,7 @@ defmodule CliMate.CLI.Option do
     doc_arg = Keyword.get_lazy(conf, :doc_arg, fn -> default_doc_arg(type) end)
     default_doc = Keyword.get(conf, :default_doc, nil)
     cast = Keyword.get(conf, :cast, nil)
+    deprecated = Keyword.get(conf, :deprecated, nil)
 
     CliMate.CLI.Argument.validate_cast!(cast)
 
@@ -162,7 +182,8 @@ defmodule CliMate.CLI.Option do
       keep: keep,
       doc_arg: doc_arg,
       default_doc: default_doc,
-      cast: cast
+      cast: cast,
+      deprecated: deprecated
     }
   end
 
@@ -171,4 +192,11 @@ defmodule CliMate.CLI.Option do
   defp default_doc_arg(:string), do: "string"
   defp default_doc_arg(:count), do: nil
   defp default_doc_arg(:boolean), do: nil
+
+  @doc """
+  Returns the option name in kebab case.
+  """
+  def cli_name(%__MODULE__{key: key}) do
+    key |> Atom.to_string() |> String.replace("_", "-")
+  end
 end

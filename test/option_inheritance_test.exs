@@ -19,6 +19,10 @@ defmodule CliMate.CLI.OptionInheritanceTest do
     text
     |> IO.ANSI.format(_emit = false)
     |> IO.iodata_to_binary()
+    # parse_or_halt! formats with `ansi_enabled: IO.ANSI.enabled?()`, which is
+    # true when tests run in a real terminal. The escape codes are then plain
+    # binaries that IO.ANSI.format/2 does not remove.
+    |> String.replace(~r/\e\[[0-9;]*m/, "")
   end
 
   defp option_lines(text) do

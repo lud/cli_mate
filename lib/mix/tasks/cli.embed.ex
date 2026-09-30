@@ -20,13 +20,18 @@ defmodule Mix.Tasks.Cli.Embed do
                `<prefix>` directly. The `extend/0` macro is still included.
                """
              ],
+             skip_docs: [
+               type: :boolean,
+               default: false,
+               doc: """
+               When true, replaces the `@moduledoc`, `@doc` and `@typedoc`
+               strings with `false` in all generated modules.
+               """
+             ],
              moduledoc: [
                type: :boolean,
                default: true,
-               doc: """
-               When true, include @moduledoc attributes in the generated code.
-               When false, defines `@moduledoc false` in all generated modules.
-               """
+               deprecated: "use --skip-docs instead"
              ],
              force: [
                type: :boolean,
@@ -72,7 +77,10 @@ defmodule Mix.Tasks.Cli.Embed do
   def run(argv) do
     %{options: opts, arguments: args} = CLI.parse_or_halt!(argv, @command)
 
-    opts = Map.put(opts, :banner, generate_banner(argv))
+    opts =
+      opts
+      |> Map.put(:banner, generate_banner(argv))
+      |> Map.put(:skip_docs, opts.skip_docs or not opts.moduledoc)
 
     namespace_replacement =
       args.prefix
@@ -207,16 +215,9 @@ defmodule Mix.Tasks.Cli.Embed do
     line_length = Keyword.get(fmt_opts, :line_length, 98)
 
     forms =
-      if opts.moduledoc do
-        forms
-      else
-        Macro.postwalk(forms, &strip_docs/1)
-      end
-
-    forms =
       forms
       |> Macro.postwalk(&replace_aliases(&1, spec.alias_replacement))
-      |> Macro.postwalk(&replace_doc_aliases(&1, spec.alias_replacement))
+      |> Macro.postwalk(&update_docs(&1, opts.skip_docs, spec.alias_replacement))
 
     module_code =
       forms
@@ -230,26 +231,24 @@ defmodule Mix.Tasks.Cli.Embed do
     opts.banner <> module_code
   end
 
-  defp strip_docs({:moduledoc, meta, _}), do: {:moduledoc, meta, [false]}
-
-  defp strip_docs({:@, attr_meta, [{:doc_if_moduledoc, skip_meta, value}]})
-       when not is_nil(value) do
-    {:@, attr_meta, [{:doc_if_moduledoc, skip_meta, [{:__block__, skip_meta, [false]}]}]}
-  end
-
-  defp strip_docs(form), do: form
-
-  defp replace_doc_aliases({:@, meta, [{attr, attr_meta, [value]}]}, alias_replacement)
+  defp update_docs({:@, meta, [{attr, attr_meta, [value]}]}, skip_docs?, alias_replacement)
        when attr in [:moduledoc, :doc, :typedoc] do
     value =
-      if doc_string?(value),
-        do: replace_doc_text(value, alias_replacement),
-        else: value
+      cond do
+        not doc_string?(value) -> value
+        skip_docs? -> {:__block__, attr_meta, [false]}
+        true -> replace_doc_text(value, alias_replacement)
+      end
 
     {:@, meta, [{attr, attr_meta, [value]}]}
   end
 
-  defp replace_doc_aliases(form, _), do: form
+  defp update_docs({:@, attr_meta, [{:doc_if_moduledoc, skip_meta, value}]}, true, _)
+       when not is_nil(value) do
+    {:@, attr_meta, [{:doc_if_moduledoc, skip_meta, [{:__block__, skip_meta, [false]}]}]}
+  end
+
+  defp update_docs(form, _, _), do: form
 
   defp doc_string?({:__block__, _, [text]}), do: is_binary(text)
   defp doc_string?({:<<>>, _, _}), do: true

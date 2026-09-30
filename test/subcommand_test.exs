@@ -547,7 +547,7 @@ defmodule CliMate.CLI.SubcommandTest do
   describe "usage format" do
     test "synopsis for a command with sub-commands ends with <subcommand>" do
       cmd = [name: "cmd", subcommands: [sub: []]]
-      out = cmd |> CLI.format_usage() |> IO.iodata_to_binary()
+      out = cmd |> CLI.format_usage(io_columns: 100) |> IO.iodata_to_binary()
       assert out =~ "cmd [options] <subcommand>"
     end
 
@@ -561,7 +561,7 @@ defmodule CliMate.CLI.SubcommandTest do
         ]
       ]
 
-      out = cmd |> CLI.format_usage() |> IO.iodata_to_binary()
+      out = cmd |> CLI.format_usage(io_columns: 100) |> IO.iodata_to_binary()
       assert out =~ "Sub-commands"
       assert out =~ "Z doc"
 
@@ -574,7 +574,7 @@ defmodule CliMate.CLI.SubcommandTest do
 
     test "module-form sub-command docs are pulled from command/0" do
       cmd = [name: "cmd", subcommands: [dm: SubModDoc]]
-      out = cmd |> CLI.format_usage() |> IO.iodata_to_binary()
+      out = cmd |> CLI.format_usage(io_columns: 100) |> IO.iodata_to_binary()
       assert out =~ "Module doc line"
     end
 
@@ -616,7 +616,7 @@ defmodule CliMate.CLI.SubcommandTest do
 
     test "format_usage for a flat command shows no sub-commands markers" do
       cmd = [name: "cmd", options: [foo: [type: :string, doc: "a foo"]]]
-      out = cmd |> CLI.format_usage() |> IO.iodata_to_binary()
+      out = cmd |> CLI.format_usage(io_columns: 100) |> IO.iodata_to_binary()
       refute out =~ "Sub-commands"
       refute out =~ "<subcommand>"
       assert out =~ "foo"

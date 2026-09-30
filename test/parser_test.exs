@@ -255,7 +255,7 @@ defmodule CliMate.CLI.ParserTest do
     end
 
     test "cannot be overriden" do
-      assert_raise ArgumentError, "the :help option cannot be overriden", fn ->
+      assert_raise ArgumentError, "the :help option cannot be overriden in command", fn ->
         CLI.parse(~w(--help 123), options: [help: [type: :integer]])
       end
     end
@@ -355,7 +355,7 @@ defmodule CliMate.CLI.ParserTest do
     test "arguments types are from a shortlist" do
       opts = [arguments: [one: [type: :"unknown-type"]]]
 
-      assert_raise ArgumentError, ~r"expected argument type", fn ->
+      assert_raise ArgumentError, ~r"invalid value for :type in argument :one", fn ->
         CLI.parse(~w(1), opts)
       end
     end

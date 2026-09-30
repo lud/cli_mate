@@ -63,7 +63,7 @@ defmodule CliMate.CLI.UsageFormat do
         _ ->
           adapter.format_section(
             "Sub-commands",
-            adapter.format_subcommands(build_subcommands(command), fmt_opts),
+            adapter.format_subcommands(Command.build_subcommands(command), fmt_opts),
             fmt_opts
           )
       end
@@ -95,10 +95,6 @@ defmodule CliMate.CLI.UsageFormat do
 
   defp without_deprecated_options(command) do
     %{command | options: Enum.reject(command.options, fn {_, opt} -> opt.deprecated end)}
-  end
-
-  defp build_subcommands(command) do
-    Enum.map(command.subcommands, fn {key, v} -> {key, Command.new(v)} end)
   end
 
   defp default_fmt_opts do

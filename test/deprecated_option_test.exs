@@ -22,7 +22,7 @@ defmodule CliMate.CLI.DeprecatedOptionTest do
 
   defp usage_text(command, fmt_opts \\ []) do
     command
-    |> CLI.format_usage(fmt_opts)
+    |> CLI.format_usage(Keyword.put_new(fmt_opts, :io_columns, 100))
     |> IO.ANSI.format(_emit = false)
     |> IO.iodata_to_binary()
   end
@@ -34,7 +34,6 @@ defmodule CliMate.CLI.DeprecatedOptionTest do
       end
     end
 
-    @tag :skip
     test "raises on an invalid value" do
       for value <- [:yes, 1, ~c"charlist", %{}] do
         assert_raise ArgumentError, fn ->

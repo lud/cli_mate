@@ -1,4 +1,6 @@
 defmodule CliMate.CLI.Argument do
+  alias CliMate.CLI.OptsValidator
+
   @moduledoc """
   Describes an argument.
 
@@ -78,7 +80,7 @@ defmodule CliMate.CLI.Argument do
   Builds an argument struct from its key and settings.
 
   The accepted settings are listed in the module documentation. Raises an
-  `ArgumentError` when the type or the cast function is invalid.
+  `ArgumentError` when the settings are invalid.
 
   ### Examples
 
@@ -87,52 +89,30 @@ defmodule CliMate.CLI.Argument do
       iex> CliMate.CLI.Argument.new(:lang, [])
       %CliMate.CLI.Argument{key: :lang, required: true, cast: nil, doc: "", type: :string, repeat: false}
   """
-  def new(key, conf) when is_atom(key) and is_list(conf) do
-    required = Keyword.get(conf, :required, true)
-    cast = Keyword.get(conf, :cast, nil)
+  def new(key, conf) when is_atom(key) do
+    settings = OptsValidator.validate!(conf, "argument #{inspect(key)}", &validate_setting/2)
 
-    doc = Keyword.get(conf, :doc) || ""
-    type = Keyword.get(conf, :type, :string)
-    repeat = Keyword.get(conf, :repeat, false)
-
-    validate_type(type)
-    validate_cast!(cast)
-
-    %__MODULE__{key: key, required: required, cast: cast, doc: doc, type: type, repeat: repeat}
+    %__MODULE__{
+      key: key,
+      required: Map.get(settings, :required, true),
+      cast: Map.get(settings, :cast),
+      doc: Map.get(settings, :doc) || "",
+      type: Map.get(settings, :type, :string),
+      repeat: Map.get(settings, :repeat, false)
+    }
   end
 
-  @doc """
-  Validates that the given cast value is a valid caster.
-
-  A valid caster is either `nil`, a function of arity 1, or an MFA tuple
-  `{module, function, args}` where args is a list.
-
-  Raises `ArgumentError` if the cast is invalid.
-  """
-  def validate_cast!(cast) do
-    case cast do
-      f when is_function(f, 1) ->
-        :ok
-
-      nil ->
-        :ok
-
-      {m, f, a} when is_atom(m) and is_atom(f) and is_list(a) ->
-        :ok
-
-      _ ->
-        raise ArgumentError,
-              "Expected :cast function to be a valid cast function, got: #{inspect(cast)}"
-    end
+  def new(key, _conf) do
+    raise ArgumentError, "invalid argument key, expected an atom, got: #{inspect(key)}"
   end
 
-  # We only support raw types for now
-  defp validate_type(type) do
-    if type not in [:string, :float, :integer] do
-      raise ArgumentError,
-            "expected argument type to be one of :string, :float or :integer, got: #{inspect(type)}"
-    end
+  defp validate_setting(:required, value), do: OptsValidator.boolean(value)
 
-    :ok
-  end
+  defp validate_setting(:type, value),
+    do: OptsValidator.one_of(value, [:string, :integer, :float])
+
+  defp validate_setting(:doc, value), do: OptsValidator.optional_string(value)
+  defp validate_setting(:cast, value), do: OptsValidator.caster(value)
+  defp validate_setting(:repeat, value), do: OptsValidator.boolean(value)
+  defp validate_setting(_, _), do: :unknown
 end

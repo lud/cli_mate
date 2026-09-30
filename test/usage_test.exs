@@ -26,7 +26,7 @@ defmodule CliMate.CLI.UsageTest do
     ]
 
     opts_doc =
-      CLI.format_usage(command)
+      CLI.format_usage(command, io_columns: 100)
       |> no_ansi()
       |> String.split("\n")
       |> Enum.map(&String.trim/1)

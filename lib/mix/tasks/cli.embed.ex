@@ -1,5 +1,6 @@
 defmodule Mix.Tasks.Cli.Embed do
   alias CliMate.CLI
+  alias CliMate.Embed
   use Mix.Task
 
   @shortdoc "Copies the CLI code into your own application."
@@ -73,251 +74,49 @@ defmodule Mix.Tasks.Cli.Embed do
   #{CliMate.CLI.format_usage(@command, format: :moduledoc)}
   """
 
+  @doc false
+  def command, do: @command
+
   @impl true
   def run(argv) do
     %{options: opts, arguments: args} = CLI.parse_or_halt!(argv, @command)
 
-    opts =
-      opts
-      |> Map.put(:banner, generate_banner(argv))
-      |> Map.put(:skip_docs, opts.skip_docs or not opts.moduledoc)
-
-    namespace_replacement =
-      args.prefix
-      |> String.split(".")
-      |> Enum.map(&String.to_atom/1)
-
-    alias_replacement =
-      if opts.extend do
-        {namespace_replacement, namespace_replacement ++ [:Base]}
-      else
-        {namespace_replacement, namespace_replacement}
-      end
-
-    target_root_path = Path.absname(args.path)
-
-    source_root_path =
-      __ENV__.file
-      |> Path.dirname()
-      |> Path.join("../../cli_mate/cli")
-      |> Path.expand()
-
-    source_root_size = byte_size(source_root_path)
-
-    source_specs =
-      source_root_path
-      |> Path.join("**/*.ex")
-      |> Path.wildcard()
-      |> Enum.map(fn source_path ->
-        <<^source_root_path::binary-size(^source_root_size), target_sub_path::binary>> =
-          source_path
-
-        target_path = Path.relative_to_cwd(target_root_path <> target_sub_path)
-
-        %{
-          alias_replacement: alias_replacement,
-          source_code: read_source(source_path, opts),
-          source_path: source_path,
-          target_path: target_path
-        }
-      end)
-
-    main_source = source_root_path <> ".ex"
-
-    main_file_spec =
-      if opts.extend do
-        %{
-          source_path: main_source,
-          target_path: target_root_path <> "/base.ex",
-          source_code: read_source(main_source, opts),
-          alias_replacement: alias_replacement
-        }
-      else
-        %{
-          source_path: main_source,
-          target_path: target_root_path <> ".ex",
-          source_code: read_source(main_source, opts),
-          alias_replacement: alias_replacement
-        }
-      end
-
-    source_specs = [main_file_spec | source_specs]
-
-    written_specs =
-      Enum.flat_map(source_specs, fn spec ->
-        case handle_source(spec, opts) do
-          true -> [spec]
-          false -> []
-        end
-      end)
-
-    written_files = Enum.map(written_specs, & &1.target_path)
-
-    # The generated modules are paritally formatted but they are as code blocks.
-    # Mix format will finalize the format for acutal files.
-    Mix.Task.run("format", written_files)
+    args
+    |> Embed.config(opts)
+    |> Embed.generate()
+    |> Enum.each(&handle_file(&1, opts))
   end
 
-  defp handle_source(spec, opts) do
-    target_exists? = File.exists?(spec.target_path)
+  defp handle_file(file, opts) do
+    target_exists? = File.exists?(file.path)
 
     cond do
       opts.force ->
-        maybe_write_module(target_exists?, spec, opts)
+        maybe_write_file(target_exists?, file, opts)
 
       target_exists? ->
-        CLI.writeln("would create #{spec.target_path} (exists)")
-        false
+        CLI.writeln("would create #{file.path} (exists)")
 
       :other ->
-        CLI.writeln("would create #{spec.target_path}")
-        false
+        CLI.writeln("would create #{file.path}")
     end
   end
 
-  defp ask_overwrite(target_path) do
-    Mix.Shell.IO.yes?("file #{target_path} exists, overwrite?", default: :no)
+  defp ask_overwrite(path) do
+    Mix.Shell.IO.yes?("file #{path} exists, overwrite?", default: :no)
   end
 
-  defp maybe_write_module(true = _target_exists?, spec, opts) do
-    if opts.yes || ask_overwrite(spec.target_path) do
-      :ok = write_module(spec, opts)
-      CLI.writeln("created #{spec.target_path} (overwrite)")
-      true
+  defp maybe_write_file(true = _target_exists?, file, opts) do
+    if opts.yes || ask_overwrite(file.path) do
+      Embed.write_file!(file)
+      CLI.writeln("created #{file.path} (overwrite)")
     else
-      CLI.warn("skipped file #{spec.target_path} (exists)")
-      false
+      CLI.warn("skipped file #{file.path} (exists)")
     end
   end
 
-  defp maybe_write_module(false = _target_exists?, spec, opts) do
-    :ok = write_module(spec, opts)
-    CLI.writeln("created #{spec.target_path}")
-    true
-  end
-
-  defp write_module(spec, opts) do
-    module_code = generate_module(spec, opts)
-    File.mkdir_p!(Path.dirname(spec.target_path))
-    File.write!(spec.target_path, module_code)
-  end
-
-  defp generate_module(spec, opts) do
-    {forms, comments} =
-      Code.string_to_quoted_with_comments!(spec.source_code,
-        token_metadata: true,
-        literal_encoder: &{:ok, {:__block__, &2, [&1]}},
-        unescape: false,
-        columns: true
-      )
-
-    fmt_opts = formatter_options()
-    line_length = Keyword.get(fmt_opts, :line_length, 98)
-
-    forms =
-      forms
-      |> Macro.postwalk(&replace_aliases(&1, spec.alias_replacement))
-      |> Macro.postwalk(&update_docs(&1, opts.skip_docs, spec.alias_replacement))
-
-    module_code =
-      forms
-      |> Code.quoted_to_algebra(
-        [comments: comments, migrate_charlists_as_sigils: true, escape: false] ++
-          formatter_options()
-      )
-      |> Inspect.Algebra.format(line_length)
-      |> IO.iodata_to_binary()
-
-    opts.banner <> module_code
-  end
-
-  defp update_docs({:@, meta, [{attr, attr_meta, [value]}]}, skip_docs?, alias_replacement)
-       when attr in [:moduledoc, :doc, :typedoc] do
-    value =
-      cond do
-        not doc_string?(value) -> value
-        skip_docs? -> {:__block__, attr_meta, [false]}
-        true -> replace_doc_text(value, alias_replacement)
-      end
-
-    {:@, meta, [{attr, attr_meta, [value]}]}
-  end
-
-  defp update_docs({:@, attr_meta, [{:doc_if_moduledoc, skip_meta, value}]}, true, _)
-       when not is_nil(value) do
-    {:@, attr_meta, [{:doc_if_moduledoc, skip_meta, [{:__block__, skip_meta, [false]}]}]}
-  end
-
-  defp update_docs(form, _, _), do: form
-
-  defp doc_string?({:__block__, _, [text]}), do: is_binary(text)
-  defp doc_string?({:<<>>, _, _}), do: true
-  defp doc_string?(_), do: false
-
-  defp replace_doc_text({:__block__, meta, [text]}, alias_replacement) do
-    {:__block__, meta, [replace_text_aliases(text, alias_replacement)]}
-  end
-
-  defp replace_doc_text({:<<>>, meta, parts}, alias_replacement) do
-    parts =
-      Enum.map(parts, fn
-        text when is_binary(text) -> replace_text_aliases(text, alias_replacement)
-        interpolation -> interpolation
-      end)
-
-    {:<<>>, meta, parts}
-  end
-
-  defp replace_text_aliases(text, {namespace_replacement, main_mod_replacement}) do
-    Regex.replace(~r/\bCliMate\.CLI((?:\.[A-Z]\w*)*)/, text, fn
-      _, "" -> Enum.join(main_mod_replacement, ".")
-      _, submodule -> Enum.join(namespace_replacement, ".") <> submodule
-    end)
-  end
-
-  # replacement of the exact alias
-  defp replace_aliases({:__aliases__, meta, [:CliMate, :CLI]}, {_, main_mod_replacement}) do
-    {:__aliases__, meta, main_mod_replacement}
-  end
-
-  # replacement of submodule
-  defp replace_aliases({:__aliases__, meta, [:CliMate, :CLI | rest]}, {namespace_replacement, _}) do
-    {:__aliases__, meta, namespace_replacement ++ rest}
-  end
-
-  defp replace_aliases(form, _), do: form
-
-  defp formatter_options do
-    path = ".formatter.exs"
-
-    with true <- File.regular?(path),
-         {opts, _} <- Code.eval_file(path),
-         true <- Keyword.keyword?(opts) do
-      Keyword.take(opts, [:locals_without_parens])
-    else
-      _ -> []
-    end
-  end
-
-  defp read_source(path, %{force: true}), do: File.read!(path)
-  defp read_source(_path, _), do: []
-
-  defp generate_banner(argv) do
-    quoted =
-      Enum.map_intersperse(argv, " ", fn arg ->
-        if String.match?(arg, ~r/\s/),
-          do: inspect(arg),
-          else: arg
-      end)
-
-    """
-    # This file was generated by CliMate. Do not edit this file directly or your
-    # changes may be lost.
-    #
-    # Regenerate the files with the same command:
-    #
-    #   mix cli.embed #{quoted}
-    #
-    """
+  defp maybe_write_file(false = _target_exists?, file, _opts) do
+    Embed.write_file!(file)
+    CLI.writeln("created #{file.path}")
   end
 end

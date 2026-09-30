@@ -213,7 +213,10 @@ defmodule Mix.Tasks.Cli.Embed do
         Macro.postwalk(forms, &strip_docs/1)
       end
 
-    forms = Macro.postwalk(forms, &replace_aliases(&1, spec.alias_replacement))
+    forms =
+      forms
+      |> Macro.postwalk(&replace_aliases(&1, spec.alias_replacement))
+      |> Macro.postwalk(&replace_doc_aliases(&1, spec.alias_replacement))
 
     module_code =
       forms
@@ -235,6 +238,43 @@ defmodule Mix.Tasks.Cli.Embed do
   end
 
   defp strip_docs(form), do: form
+
+  defp replace_doc_aliases({:@, meta, [{attr, attr_meta, [value]}]}, alias_replacement)
+       when attr in [:moduledoc, :doc, :typedoc] do
+    value =
+      if doc_string?(value),
+        do: replace_doc_text(value, alias_replacement),
+        else: value
+
+    {:@, meta, [{attr, attr_meta, [value]}]}
+  end
+
+  defp replace_doc_aliases(form, _), do: form
+
+  defp doc_string?({:__block__, _, [text]}), do: is_binary(text)
+  defp doc_string?({:<<>>, _, _}), do: true
+  defp doc_string?(_), do: false
+
+  defp replace_doc_text({:__block__, meta, [text]}, alias_replacement) do
+    {:__block__, meta, [replace_text_aliases(text, alias_replacement)]}
+  end
+
+  defp replace_doc_text({:<<>>, meta, parts}, alias_replacement) do
+    parts =
+      Enum.map(parts, fn
+        text when is_binary(text) -> replace_text_aliases(text, alias_replacement)
+        interpolation -> interpolation
+      end)
+
+    {:<<>>, meta, parts}
+  end
+
+  defp replace_text_aliases(text, {namespace_replacement, main_mod_replacement}) do
+    Regex.replace(~r/\bCliMate\.CLI((?:\.[A-Z]\w*)*)/, text, fn
+      _, "" -> Enum.join(main_mod_replacement, ".")
+      _, submodule -> Enum.join(namespace_replacement, ".") <> submodule
+    end)
+  end
 
   # replacement of the exact alias
   defp replace_aliases({:__aliases__, meta, [:CliMate, :CLI]}, {_, main_mod_replacement}) do

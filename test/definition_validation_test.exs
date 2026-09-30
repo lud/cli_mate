@@ -120,6 +120,14 @@ defmodule CliMate.CLI.DefinitionValidationTest do
         Option.new(:opt, type: :string, type: :integer)
       end)
     end
+
+    test "rejects keep with the count type" do
+      assert_invalid("option :opt cannot use keep: true with type: :count", fn ->
+        Option.new(:opt, type: :count, keep: true)
+      end)
+
+      assert %Option{} = Option.new(:opt, type: :count, keep: false)
+    end
   end
 
   describe "argument settings" do

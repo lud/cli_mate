@@ -164,6 +164,10 @@ defmodule CliMate.CLI.Option do
     keep = Map.get(settings, :keep, false)
     type = Map.get(settings, :type, :string)
 
+    if keep and type == :count do
+      raise ArgumentError, "option #{inspect(key)} cannot use keep: true with type: :count"
+    end
+
     default =
       case Map.fetch(settings, :default) do
         {:ok, term} -> {:default, term}

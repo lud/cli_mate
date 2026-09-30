@@ -185,7 +185,7 @@ defmodule Mix.Tasks.Cli.Embed do
   defp maybe_write_module(false = _target_exists?, spec, opts) do
     :ok = write_module(spec, opts)
     CLI.writeln("created #{spec.target_path}")
-    false
+    true
   end
 
   defp write_module(spec, opts) do

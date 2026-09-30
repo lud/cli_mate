@@ -254,6 +254,39 @@ defmodule CliMate.CLI.ParserTest do
       assert_receive {:cli_mate_shell, :halt, 0}
     end
 
+    test "wins over option cast errors" do
+      cmd = [
+        options: [
+          bad: [type: :string, cast: fn _ -> {:error, "bad value"} end],
+          good: [type: :string]
+        ]
+      ]
+
+      assert {:error, {:option_cast, :bad, "bad value"}} = CLI.parse(~w(--bad x), cmd)
+
+      assert {:ok, %{options: options, arguments: %{}, execute: nil}} =
+               CLI.parse(~w(--bad x --good y --help), cmd)
+
+      assert %{help: true, good: "y"} = options
+      refute Map.has_key?(options, :bad)
+    end
+
+    test "wins over invalid options" do
+      cmd = [options: [num: [type: :integer]]]
+
+      assert {:ok, %{options: %{help: true}}} = CLI.parse(~w(--num abc --help), cmd)
+      assert {:ok, %{options: %{help: true}}} = CLI.parse(~w(--unknown --help), cmd)
+    end
+
+    test "wins over option errors with parse_or_halt!" do
+      cmd = [options: [bad: [type: :string, cast: fn _ -> {:error, "bad value"} end]]]
+
+      assert :halt = CLI.parse_or_halt!(~w(--bad x --help), cmd)
+      assert_receive {:cli_mate_shell, :info, _usage}
+      assert_receive {:cli_mate_shell, :halt, 0}
+      refute_received {:cli_mate_shell, :error, _}
+    end
+
     test "cannot be overriden" do
       assert_raise ArgumentError, "the :help option cannot be overriden in command", fn ->
         CLI.parse(~w(--help 123), options: [help: [type: :integer]])

@@ -26,16 +26,24 @@ defmodule CliMate.CLI.Command do
   ### Option inheritance across sub-commands
 
   Options declared on a parent command are inherited by sub-commands and can be
-  passed on any level where the command is being parsed. Merging rules for the
-  final `:options` map:
+  passed on any level where the command is being parsed. Arguments given before
+  a sub-command name are parsed with the options known at that level, and
+  arguments given after it with the options of the sub-command, including the
+  inherited ones.
 
-  * A value explicitly parsed from argv at any level wins and is never
-    overwritten by a default from a deeper level.
-  * If an option is not passed on argv, the default from the deepest level that
-    declares the option is used. Redefining an option at a child level replaces
-    the parent entry entirely (including `:short` and `:keep`).
-  * `:keep` lists are not accumulated across levels: the list parsed at a given
-    level replaces any previously accumulated list.
+  * Redefining an option at a child level replaces the parent entry entirely,
+    including `:short`, `:default`, `:cast` and `:deprecated`. The child
+    definition must keep the same `:type` and `:keep` settings, otherwise an
+    `ArgumentError` is raised. Use `:cast` to change the final value.
+  * When a child option uses the same `:short` as an inherited option, the
+    short refers to the child option after the sub-command name. The inherited
+    option is still available with its long name.
+  * Values given on several levels are combined as if they were given on a
+    single level: the last value wins, `:keep` lists are concatenated and
+    `:count` occurrences are summed.
+  * The default value, the cast function and the deprecation warning are taken
+    from the definition of the selected sub-command, whatever the level the
+    value was given on.
   """
 
   @type command :: [command_opt]

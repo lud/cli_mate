@@ -543,9 +543,16 @@ defmodule CliMate.CLI.DeprecatedOptionTest do
       ]
     end
 
-    test "child redefining a parent deprecated option: warns when given at parent level" do
+    test "child redefining a parent deprecated option: no warning when given at parent level" do
       assert {:ok, %{options: %{key: "x"}}} =
                CLI.parse(~w(--key x sub), child_undeprecates_command())
+
+      refute_warnings()
+    end
+
+    test "child redefining a parent deprecated option: warns when stopping at parent level" do
+      assert {:ok, %{options: %{key: "x", help: true}, path: []}} =
+               CLI.parse(~w(--key x --help), child_undeprecates_command())
 
       assert_deprecation_warning("key")
       refute_warnings()
@@ -565,10 +572,11 @@ defmodule CliMate.CLI.DeprecatedOptionTest do
       assert text =~ "Child key doc."
     end
 
-    test "child deprecating a parent option: no warning when given at parent level" do
+    test "child deprecating a parent option: warns when given at parent level" do
       assert {:ok, %{options: %{key: "x"}}} =
                CLI.parse(~w(--key x sub), child_deprecates_command())
 
+      assert_deprecation_warning("key")
       refute_warnings()
     end
 

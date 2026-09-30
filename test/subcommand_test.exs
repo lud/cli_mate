@@ -164,7 +164,7 @@ defmodule CliMate.CLI.SubcommandTest do
     test "child redefinition drops the parent short alias" do
       cmd = [
         options: [verbose: [type: :boolean, short: :v]],
-        subcommands: [sub: [options: [verbose: [type: :count]]]]
+        subcommands: [sub: [options: [verbose: [type: :boolean]]]]
       ]
 
       assert {:error, {:invalid, [{"-v", _}]}} = CLI.parse(~w(sub -v), cmd)
@@ -177,34 +177,14 @@ defmodule CliMate.CLI.SubcommandTest do
                CLI.parse(~w(--child-only val sub), cmd)
     end
 
-    test "keep parent, non-keep child → child fully replaces" do
+    test "keep option given on both levels accumulates values" do
       cmd = [
         options: [shared: [type: :string, keep: true]],
-        subcommands: [sub: [options: [shared: [type: :string]]]]
-      ]
-
-      assert {:ok, %{options: %{shared: "y"}}} =
-               CLI.parse(~w(--shared x sub --shared y), cmd)
-    end
-
-    test "non-keep parent, keep child → child wins with list" do
-      cmd = [
-        options: [shared: [type: :string]],
         subcommands: [sub: [options: [shared: [type: :string, keep: true]]]]
       ]
 
-      assert {:ok, %{options: %{shared: ["y", "z"]}}} =
+      assert {:ok, %{options: %{shared: ["x", "y", "z"]}}} =
                CLI.parse(~w(--shared x sub --shared y --shared z), cmd)
-    end
-
-    test "both parent and child are keep with different types → child wins entirely" do
-      cmd = [
-        options: [shared: [type: :string, keep: true]],
-        subcommands: [sub: [options: [shared: [type: :integer, keep: true]]]]
-      ]
-
-      assert {:ok, %{options: %{shared: [1, 2]}}} =
-               CLI.parse(~w(--shared x sub --shared 1 --shared 2), cmd)
     end
 
     test "missing sub-command returns :missing_subcommand" do
@@ -268,29 +248,33 @@ defmodule CliMate.CLI.SubcommandTest do
         subcommands: [
           mid: [
             subcommands: [
-              leaf: [options: [x: [type: :integer]]]
+              leaf: [options: [x: [type: :string, cast: &{:ok, String.upcase(&1)}]]]
             ]
           ]
         ]
       ]
 
-      assert {:ok, %{options: %{x: 42}}} = CLI.parse(~w(mid leaf --x 42), cmd)
+      assert {:ok, %{options: %{x: "LEAF"}}} = CLI.parse(~w(mid leaf --x leaf), cmd)
+      assert {:ok, %{options: %{x: "ROOT"}}} = CLI.parse(~w(--x root mid leaf), cmd)
+      assert {:ok, %{options: options}} = CLI.parse(~w(mid leaf), cmd)
+      refute Map.has_key?(options, :x)
     end
 
-    test "three levels all redefining same :keep option → last level wins" do
+    test "three levels all redefining same :keep option → values accumulate" do
       cmd = [
         options: [x: [type: :string, keep: true]],
         subcommands: [
           a: [
             options: [x: [type: :string, keep: true]],
             subcommands: [
-              b: [options: [x: [type: :integer, keep: true]]]
+              b: [options: [x: [type: :string, keep: true]]]
             ]
           ]
         ]
       ]
 
-      assert {:ok, %{options: %{x: [9]}}} = CLI.parse(~w(--x r a --x ma b --x 9), cmd)
+      assert {:ok, %{options: %{x: ["r", "ma", "9"]}}} =
+               CLI.parse(~w(--x r a --x ma b --x 9), cmd)
     end
 
     test "--help at an intermediate level returns help for that level" do
@@ -403,7 +387,7 @@ defmodule CliMate.CLI.SubcommandTest do
                CLI.parse(~w(mid leaf --token leaf_value), cmd)
     end
 
-    test "keep option list is replaced at a deeper level, not accumulated" do
+    test "keep option list is accumulated across levels" do
       cmd = [
         options: [tag: [type: :string, keep: true]],
         subcommands: [
@@ -411,7 +395,7 @@ defmodule CliMate.CLI.SubcommandTest do
         ]
       ]
 
-      assert {:ok, %{options: %{tag: ["c"]}, path: [:mid, :leaf]}} =
+      assert {:ok, %{options: %{tag: ["a", "b", "c"]}, path: [:mid, :leaf]}} =
                CLI.parse(~w(--tag a --tag b mid leaf --tag c), cmd)
     end
   end
